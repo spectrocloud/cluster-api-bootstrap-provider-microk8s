@@ -1,0 +1,20 @@
+# permissions for end users to view microk8sconfigtemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: microk8sconfigtemplate-viewer-role
+rules:
+- apiGroups:
+  - bootstrap.cluster.x-k8s.io.bootstrap.cluster.x-k8s.io
+  resources:
+  - microk8sconfigtemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - bootstrap.cluster.x-k8s.io.bootstrap.cluster.x-k8s.io
+  resources:
+  - microk8sconfigtemplates/status
+  verbs:
+  - get

@@ -1,0 +1,7 @@
+{
+  "name": "microk8s",
+  "config": {
+    "componentsFile": "bootstrap-components.yaml",
+    "nextVersion": "v1.0.0"
+  }
+}
