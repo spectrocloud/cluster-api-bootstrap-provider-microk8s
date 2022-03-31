@@ -87,13 +87,15 @@ spec:
   template:
     spec: {}
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
 kind: MicroK8sConfigTemplate
 metadata:
   name: capi-quickstart-md-0
   namespace: default
 spec:
-  foo: bar
+  template:
+    spec:
+      foo: bar
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -109,8 +111,7 @@ spec:
     spec:
       bootstrap:
         configRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
           kind: MicroK8sConfigTemplate
           name: capi-quickstart-md-0
           namespace: default

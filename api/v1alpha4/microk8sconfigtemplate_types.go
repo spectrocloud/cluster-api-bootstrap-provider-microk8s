@@ -22,14 +22,16 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type MicroK8sConfigTemplateResource struct {
+	Spec MicroK8sConfigSpec `json:"spec,omitempty"`
+}
 
 // MicroK8sConfigTemplateSpec defines the desired state of MicroK8sConfigTemplate
 type MicroK8sConfigTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of MicroK8sConfigTemplate. Edit microk8sconfigtemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Template MicroK8sConfigTemplateResource `json:"template"`
 }
 
 // MicroK8sConfigTemplateStatus defines the observed state of MicroK8sConfigTemplate

@@ -49,6 +49,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	bootstrapclusterxk8siov1beta1 "cluster-api-bootstrap-provider-microk8s/apis/v1beta1"
 	//+kubebuilder:scaffold:imports
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 )
@@ -66,6 +67,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(bootstrapclusterxk8siov1alpha4.AddToScheme(scheme))
+	utilruntime.Must(bootstrapclusterxk8siov1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
