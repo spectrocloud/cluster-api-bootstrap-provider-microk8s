@@ -18,6 +18,7 @@ package v1alpha4
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1alpha4 "sigs.k8s.io/cluster-api/api/v1alpha4"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -34,8 +35,36 @@ type MicroK8sConfigSpec struct {
 
 // MicroK8sConfigStatus defines the observed state of MicroK8sConfig
 type MicroK8sConfigStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Ready indicates the BootstrapData field is ready to be consumed
+	Ready bool `json:"ready,omitempty"`
+
+	// DataSecretName is the name of the secret that stores the bootstrap data script.
+	// +optional
+	DataSecretName *string `json:"dataSecretName,omitempty"`
+
+	// FailureReason will be set on non-retryable errors
+	// +optional
+	FailureReason string `json:"failureReason,omitempty"`
+
+	// FailureMessage will be set on non-retryable errors
+	// +optional
+	FailureMessage string `json:"failureMessage,omitempty"`
+
+	// ObservedGeneration is the latest generation observed by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// +optional
+	Conditions clusterv1alpha4.Conditions `json:"conditions,omitempty"`
+}
+
+// GetConditions returns the set of conditions for this object.
+func (c *MicroK8sConfig) GetConditions() clusterv1alpha4.Conditions {
+	return c.Status.Conditions
+}
+
+// SetConditions sets the conditions on this object.
+func (c *MicroK8sConfig) SetConditions(conditions clusterv1alpha4.Conditions) {
+	c.Status.Conditions = conditions
 }
 
 //+kubebuilder:object:root=true

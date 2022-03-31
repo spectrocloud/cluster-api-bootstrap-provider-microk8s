@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,6 +31,8 @@ import (
 	"sigs.k8s.io/cluster-api/feature"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,9 +51,16 @@ type MicroK8sConfigReconciler struct {
 	WatchFilterValue string
 }
 
-//+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io.bootstrap.cluster.x-k8s.io,resources=microk8sconfigs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io.bootstrap.cluster.x-k8s.io,resources=microk8sconfigs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io.bootstrap.cluster.x-k8s.io,resources=microk8sconfigs/finalizers,verbs=update
+// Scope is a scoped struct used during reconciliation.
+type Scope struct {
+	logr.Logger
+	ConfigOwner *bsutil.ConfigOwner
+	Cluster     *clusterv1.Cluster
+}
+
+//+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=microk8sconfigs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=microk8sconfigs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=microk8sconfigs/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -61,7 +71,7 @@ type MicroK8sConfigReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
-func (r *MicroK8sConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *MicroK8sConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, rerr error) {
 	log := log.FromContext(ctx)
 
 	// Lookup the kubeadm config
@@ -109,16 +119,113 @@ func (r *MicroK8sConfigReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Info("Reconciliation is paused for this object")
 		return ctrl.Result{}, nil
 	}
+	// scope := &Scope{
+	// 	Logger:      log,
+	// 	ConfigOwner: configOwner,
+	// 	Cluster:     cluster,
+	// }
 
+	// Initialize the patch helper.
+	patchHelper, err := patch.NewHelper(config, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Attempt to Patch the KubeadmConfig object and status after each reconciliation if no error occurs.
+	defer func() {
+		// always update the readyCondition; the summary is represented using the "1 of x completed" notation.
+		// conditions.SetSummary(config,
+		// 	conditions.WithConditions(
+		// 		bootstrapv1.DataSecretAvailableCondition,
+		// 		bootstrapv1.CertificatesAvailableCondition,
+		// 	),
+		// )
+		// Patch ObservedGeneration only if the reconciliation completed successfully
+		patchOpts := []patch.Option{}
+		if rerr == nil {
+			patchOpts = append(patchOpts, patch.WithStatusObservedGeneration{})
+		}
+		if err := patchHelper.Patch(ctx, config, patchOpts...); err != nil {
+			log.Error(rerr, "Failed to patch config")
+			if rerr == nil {
+				rerr = err
+			}
+		}
+	}()
+
+	switch {
+	// Wait for the infrastructure to be ready.
+	case !cluster.Status.InfrastructureReady:
+		log.Info("Cluster infrastructure is not ready, waiting")
+		//	conditions.MarkFalse(config, bootstrapv1.DataSecretAvailableCondition, bootstrapv1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{}, nil
+	// Reconcile status for machines that already have a secret reference, but our status isn't up to date.
+	// This case solves the pivoting scenario (or a backup restore) which doesn't preserve the status subresource on objects.
+	case configOwner.DataSecretName() != nil && (!config.Status.Ready || config.Status.DataSecretName == nil):
+		config.Status.Ready = true
+		config.Status.DataSecretName = configOwner.DataSecretName()
+		//conditions.MarkTrue(config, bootstrapv1.DataSecretAvailableCondition)
+		return ctrl.Result{}, nil
+	// Status is ready means a config has been generated.
+	case config.Status.Ready:
+		// if config.Spec.JoinConfiguration != nil && config.Spec.JoinConfiguration.Discovery.BootstrapToken != nil {
+		// 	if !configOwner.IsInfrastructureReady() {
+		// 		// If the BootstrapToken has been generated for a join and the infrastructure is not ready.
+		// 		// This indicates the token in the join config has not been consumed and it may need a refresh.
+		// 		//	return r.refreshBootstrapToken(ctx, config, cluster)
+		// 	}
+		// 	if configOwner.IsMachinePool() {
+		// 		// If the BootstrapToken has been generated and infrastructure is ready but the configOwner is a MachinePool,
+		// 		// we rotate the token to keep it fresh for future scale ups.
+		// 		//		return r.rotateMachinePoolBootstrapToken(ctx, config, cluster, scope)
+		// 	}
+		// }
+		// In any other case just return as the config is already generated and need not be generated again.
+		return ctrl.Result{}, nil
+	}
+
+	// Note: can't use IsFalse here because we need to handle the absence of the condition as well as false.
+	if !conditions.IsTrue(cluster, clusterv1.ControlPlaneInitializedCondition) {
+		//	return r.handleClusterNotInitialized(ctx, scope)
+	}
+
+	// Every other case it's a join scenario
+	// Nb. in this case ClusterConfiguration and InitConfiguration should not be defined by users, but in case of misconfigurations, CABPK simply ignore them
+
+	// Unlock any locks that might have been set during init process
+	//r.KubeadmInitLock.Unlock(ctx, cluster)
+
+	// if the JoinConfiguration is missing, create a default one
+	// if config.Spec.JoinConfiguration == nil {
+	// 	log.Info("Creating default JoinConfiguration")
+	// 	//	config.Spec.JoinConfiguration = &bootstrapv1.JoinConfiguration{}
+	// }
+
+	// it's a control plane join
+	if configOwner.IsControlPlaneMachine() {
+
+	}
+
+	// It's a worker join
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *MicroK8sConfigReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&bootstrapclusterxk8siov1alpha4.MicroK8sConfig{}).
 		Watches(&source.Kind{Type: &clusterv1.Machine{}},
-			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc)).WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue))
+			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc)).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx),
+			r.WatchFilterValue))
+
+	if feature.Gates.Enabled(feature.MachinePool) {
+		b = b.Watches(
+			&source.Kind{Type: &expv1.MachinePool{}},
+			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc),
+		).WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue))
+	}
 
 	c, err := b.Build(r)
 	if err != nil {

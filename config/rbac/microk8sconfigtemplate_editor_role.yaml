@@ -5,7 +5,7 @@ metadata:
   name: microk8sconfigtemplate-editor-role
 rules:
 - apiGroups:
-  - bootstrap.cluster.x-k8s.io.bootstrap.cluster.x-k8s.io
+  - bootstrap.cluster.x-k8s.io
   resources:
   - microk8sconfigtemplates
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - bootstrap.cluster.x-k8s.io.bootstrap.cluster.x-k8s.io
+  - bootstrap.cluster.x-k8s.io
   resources:
   - microk8sconfigtemplates/status
   verbs:

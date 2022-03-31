@@ -9,7 +9,11 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "."
+            "program": ".",
+            "args": [
+                "--kubeconfig",
+                "/Users/alexjones/.kube/config",
+            ],
         }
     ]
 }
