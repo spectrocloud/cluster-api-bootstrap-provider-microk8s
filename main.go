@@ -35,7 +35,7 @@ import (
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2/klogr"
 
-	bootstrapclusterxk8siov1alpha4 "cluster-api-bootstrap-provider-microk8s/api/v1alpha4"
+	bootstrapclusterxk8siov1alpha4 "cluster-api-bootstrap-provider-microk8s/apis/v1alpha4"
 	"cluster-api-bootstrap-provider-microk8s/controllers"
 
 	"k8s.io/apimachinery/pkg/runtime"

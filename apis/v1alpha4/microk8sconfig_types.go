@@ -23,6 +23,9 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type JoinConfiguration struct {
+	metav1.TypeMeta `json:",inline"`
+}
 
 // MicroK8sConfigSpec defines the desired state of MicroK8sConfig
 type MicroK8sConfigSpec struct {
@@ -30,7 +33,7 @@ type MicroK8sConfigSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of MicroK8sConfig. Edit microk8sconfig_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	JoinConfiguration *JoinConfiguration `json:"joinConfiguration,omitempty"`
 }
 
 // MicroK8sConfigStatus defines the observed state of MicroK8sConfig

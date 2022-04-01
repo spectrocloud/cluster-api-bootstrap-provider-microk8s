@@ -17,7 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	v1alpha4 "cluster-api-bootstrap-provider-microk8s/api/v1alpha4"
+	v1alpha4 "cluster-api-bootstrap-provider-microk8s/apis/v1alpha4"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
