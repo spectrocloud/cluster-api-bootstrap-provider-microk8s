@@ -18,19 +18,27 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 
+	controlplanev1 "cluster-api-bootstrap-provider-microk8s/apis/controlplane/v1beta1"
+
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	controlplanev1beta1 "cluster-api-bootstrap-provider-microk8s/apis/controlplane/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // MicroK8sControlPlaneReconciler reconciles a MicroK8sControlPlane object
 type MicroK8sControlPlaneReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme           *runtime.Scheme
+	WatchFilterValue string
 }
 
 //+kubebuilder:rbac:groups=controlplane.bootstrap.cluster.x-k8s.io,resources=microk8scontrolplanes,verbs=get;list;watch;create;update;patch;delete
@@ -55,8 +63,41 @@ func (r *MicroK8sControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *MicroK8sControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&controlplanev1beta1.MicroK8sControlPlane{}).
-		Complete(r)
+func (r *MicroK8sControlPlaneReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+
+	c, err := ctrl.NewControllerManagedBy(mgr).
+		For(&controlplanev1.MicroK8sControlPlane{}).
+		Owns(&clusterv1.Machine{}).
+		WithOptions(options).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
+		Build(r)
+	if err != nil {
+		return errors.Wrap(err, "failed setting up with a controller manager")
+	}
+
+	err = c.Watch(
+		&source.Kind{Type: &clusterv1.Cluster{}},
+		handler.EnqueueRequestsFromMapFunc(r.ClusterToMicroK8sControlPlane),
+		predicates.All(ctrl.LoggerFrom(ctx),
+			predicates.ResourceHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue),
+			predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+		),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed adding Watch for Clusters to controller manager")
+	}
+	return nil
+}
+func (r *MicroK8sControlPlaneReconciler) ClusterToMicroK8sControlPlane(o client.Object) []ctrl.Request {
+	c, ok := o.(*clusterv1.Cluster)
+	if !ok {
+		panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
+	}
+
+	controlPlaneRef := c.Spec.ControlPlaneRef
+	if controlPlaneRef != nil && controlPlaneRef.Kind == "MicroK8sControlPlane" {
+		return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: controlPlaneRef.Namespace, Name: controlPlaneRef.Name}}}
+	}
+
+	return nil
 }

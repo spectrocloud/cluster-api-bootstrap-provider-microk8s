@@ -18,24 +18,99 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	corev1 "k8s.io/api/core/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type MicroK8sControlPlaneMachineTemplate struct {
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
+	ObjectMeta clusterv1.ObjectMeta `json:"metadata,omitempty"`
+
+	// InfrastructureRef is a required reference to a custom resource
+	// offered by an infrastructure provider.
+	InfrastructureRef corev1.ObjectReference `json:"infrastructureRef"`
+}
 
 // MicroK8sControlPlaneSpec defines the desired state of MicroK8sControlPlane
 type MicroK8sControlPlaneSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of MicroK8sControlPlane. Edit microk8scontrolplane_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	MachineTemplate MicroK8sControlPlaneMachineTemplate `json:"machineTemplate"`
+
+	Replicas int `json:"replicas"`
 }
 
 // MicroK8sControlPlaneStatus defines the observed state of MicroK8sControlPlane
 type MicroK8sControlPlaneStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Selector is the label selector in string format to avoid introspection
+	// by clients, and is used to provide the CRD-based integration for the
+	// scale subresource and additional integrations for things like kubectl
+	// describe.. The string will be in the same format as the query-param syntax.
+	// More info about label selectors: http://kubernetes.io/docs/user-guide/labels#label-selectors
+	// +optional
+	Selector string `json:"selector,omitempty"`
+
+	// Total number of non-terminated machines targeted by this control plane
+	// (their labels match the selector).
+	// +optional
+	Replicas int32 `json:"replicas"`
+
+	// Version represents the minimum Kubernetes version for the control plane machines
+	// in the cluster.
+	// +optional
+	Version *string `json:"version,omitempty"`
+
+	// Total number of non-terminated machines targeted by this control plane
+	// that have the desired template spec.
+	// +optional
+	UpdatedReplicas int32 `json:"updatedReplicas"`
+
+	// Total number of fully running and ready control plane machines.
+	// +optional
+	ReadyReplicas int32 `json:"readyReplicas"`
+
+	// Total number of unavailable machines targeted by this control plane.
+	// This is the total number of machines that are still required for
+	// the deployment to have 100% available capacity. They may either
+	// be machines that are running but not yet ready or machines
+	// that still have not been created.
+	// +optional
+	UnavailableReplicas int32 `json:"unavailableReplicas"`
+
+	// Initialized denotes whether or not the control plane has the
+	// uploaded kubeadm-config configmap.
+	// +optional
+	Initialized bool `json:"initialized"`
+
+	// Ready denotes that the KubeadmControlPlane API Server is ready to
+	// receive requests.
+	// +optional
+	Ready bool `json:"ready"`
+
+	// FailureReason indicates that there is a terminal problem reconciling the
+	// state, and will be set to a token value suitable for
+	// programmatic interpretation.
+	// +optional
+	FailureReason string `json:"failureReason,omitempty"`
+
+	// ErrorMessage indicates that there is a terminal problem reconciling the
+	// state, and will be set to a descriptive error message.
+	// +optional
+	FailureMessage *string `json:"failureMessage,omitempty"`
+
+	// ObservedGeneration is the latest generation observed by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Conditions defines current service state of the KubeadmControlPlane.
+	// +optional
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

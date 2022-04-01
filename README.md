@@ -3,6 +3,8 @@
 
 ## cluster-api-bootstrap-provider-microk8s
 
+This project currently combines both the bootstrap and controlplane controllers into a single process.
+
 <img src="images/microk8s.png" width="400px" />
 
 ![arch](images/arch.png)
