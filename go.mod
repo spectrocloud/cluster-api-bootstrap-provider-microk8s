@@ -3,7 +3,6 @@ module cluster-api-bootstrap-provider-microk8s
 go 1.17
 
 require (
-	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-logr/logr v1.2.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
@@ -14,8 +13,10 @@ require (
 	k8s.io/client-go v0.23.5
 	k8s.io/component-base v0.23.5
 	k8s.io/klog/v2 v2.30.0
+	k8s.io/utils v0.0.0-20211116205334-6203023598ed
 	sigs.k8s.io/cluster-api v1.1.3
 	sigs.k8s.io/controller-runtime v0.11.1
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -27,6 +28,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
@@ -74,8 +76,6 @@ require (
 	k8s.io/apiserver v0.23.0 // indirect
 	k8s.io/cluster-bootstrap v0.23.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
-	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )

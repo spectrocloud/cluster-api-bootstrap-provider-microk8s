@@ -13,8 +13,8 @@ spec:
       cidrBlocks:
       - 10.128.0.0/12
   controlPlaneRef:
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-    kind: KubeadmControlPlane
+    apiVersion: controlplane.bootstrap.x-k8s.io/v1beta1
+    kind: MicroK8sControlPlane
     name: capi-quickstart-control-plane
     namespace: default
   infrastructureRef:
@@ -29,34 +29,12 @@ metadata:
   name: capi-quickstart
   namespace: default
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-kind: KubeadmControlPlane
+apiVersion: controlplane.bootstrap.x-k8s.io/v1beta1
+kind: MicroK8sControlPlane
 metadata:
   name: capi-quickstart-control-plane
   namespace: default
 spec:
-  kubeadmConfigSpec:
-    clusterConfiguration:
-      apiServer:
-        certSANs:
-        - localhost
-        - 127.0.0.1
-        - 0.0.0.0
-      controllerManager:
-        extraArgs:
-          enable-hostpath-provisioner: "true"
-    initConfiguration:
-      nodeRegistration:
-        criSocket: /var/run/containerd/containerd.sock
-        kubeletExtraArgs:
-          cgroup-driver: cgroupfs
-          eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
-    joinConfiguration:
-      nodeRegistration:
-        criSocket: /var/run/containerd/containerd.sock
-        kubeletExtraArgs:
-          cgroup-driver: cgroupfs
-          eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
@@ -87,7 +65,7 @@ spec:
   template:
     spec: {}
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: MicroK8sConfigTemplate
 metadata:
   name: capi-quickstart-md-0
@@ -111,7 +89,7 @@ spec:
     spec:
       bootstrap:
         configRef:
-          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: MicroK8sConfigTemplate
           name: capi-quickstart-md-0
           namespace: default

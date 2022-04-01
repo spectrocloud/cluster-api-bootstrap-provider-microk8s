@@ -17,6 +17,9 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+	"net"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	v1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -31,8 +34,6 @@ import (
 type ClusterConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type BootstrapToken struct {
 	// Token is used for establishing bidirectional trust between nodes and control-planes.
@@ -60,14 +61,27 @@ type BootstrapToken struct {
 	Groups []string `json:"groups,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 type APIEndpoint struct {
 	// The hostname on which the API server is serving.
 	Host string `json:"host"`
 
 	// The port on which the API server is serving.
 	Port int32 `json:"port"`
+}
+
+// IsZero returns true if both host and port are zero values.
+func (v APIEndpoint) IsZero() bool {
+	return v.Host == "" && v.Port == 0
+}
+
+// IsValid returns true if both host and port are non-zero values.
+func (v APIEndpoint) IsValid() bool {
+	return v.Host != "" && v.Port != 0
+}
+
+// String returns a formatted version HOST:PORT of this APIEndpoint.
+func (v APIEndpoint) String() string {
+	return net.JoinHostPort(v.Host, fmt.Sprintf("%d", v.Port))
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

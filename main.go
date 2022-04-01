@@ -49,7 +49,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	controlplanev1beta1 "cluster-api-bootstrap-provider-microk8s/apis/controlplane/v1beta1"
 	bootstrapclusterxk8siov1beta1 "cluster-api-bootstrap-provider-microk8s/apis/v1beta1"
+	controlplanecontrollers "cluster-api-bootstrap-provider-microk8s/controllers/controlplane"
+
 	//+kubebuilder:scaffold:imports
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 )
@@ -68,6 +71,7 @@ func init() {
 
 	utilruntime.Must(bootstrapclusterxk8siov1alpha4.AddToScheme(scheme))
 	utilruntime.Must(bootstrapclusterxk8siov1beta1.AddToScheme(scheme))
+	utilruntime.Must(controlplanev1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -200,6 +204,13 @@ func main() {
 	}).SetupWithManager(context.TODO(),
 		mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MicroK8sConfig")
+		os.Exit(1)
+	}
+	if err = (&controlplanecontrollers.MicroK8sControlPlaneReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MicroK8sControlPlane")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
