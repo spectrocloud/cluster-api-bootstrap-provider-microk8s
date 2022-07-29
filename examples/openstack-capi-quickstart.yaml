@@ -115,6 +115,4 @@ metadata:
   namespace: default
 spec:
   template:
-    spec:
-      joinConfiguration:
-        connectionToken: "dG91Y2ggL3Zhci90bXAvZm9v"
+    spec: {}
