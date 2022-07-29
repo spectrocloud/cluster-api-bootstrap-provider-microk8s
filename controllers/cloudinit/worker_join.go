@@ -25,6 +25,9 @@ import (
 const (
 	workerJoinCloudInit = `{{.Header}}
 runcmd:
+- sudo echo IPOfNodeToJoin {{.IPOfNodeToJoin}}
+- sudo echo PortOfNodeToJoin {{.PortOfNodeToJoin}}
+- sudo echo Version {{.Version}}
 - sudo sh -c "while ! snap install microk8s --classic {{.Version}} ; do sleep 10 ; echo 'Retry snap installation'; done"
 - sudo microk8s status --wait-ready
 - sudo echo "Stopping"

@@ -35,32 +35,6 @@ type ClusterConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 }
 
-type BootstrapToken struct {
-	// Token is used for establishing bidirectional trust between nodes and control-planes.
-	// Used for joining nodes in the cluster.
-	Token string `json:"token"`
-	// Description sets a human-friendly message why this token exists and what it's used
-	// for, so other administrators can know its purpose.
-	// +optional
-	Description string `json:"description,omitempty"`
-	// TTL defines the time to live for this token. Defaults to 24h.
-	// Expires and TTL are mutually exclusive.
-	// +optional
-	TTL *metav1.Duration `json:"ttl,omitempty"`
-	// Expires specifies the timestamp when this token expires. Defaults to being set
-	// dynamically at runtime based on the TTL. Expires and TTL are mutually exclusive.
-	// +optional
-	Expires *metav1.Time `json:"expires,omitempty"`
-	// Usages describes the ways in which this token can be used. Can by default be used
-	// for establishing bidirectional trust, but that can be changed here.
-	// +optional
-	Usages []string `json:"usages,omitempty"`
-	// Groups specifies the extra groups that this token will authenticate as when/if
-	// used for authentication
-	// +optional
-	Groups []string `json:"groups,omitempty"`
-}
-
 type APIEndpoint struct {
 	// The hostname on which the API server is serving.
 	Host string `json:"host"`
@@ -91,7 +65,16 @@ type InitConfiguration struct {
 
 	// +optional
 	LocalAPIEndpoint APIEndpoint `json:"localAPIEndpoint,omitempty"`
-	Addons           []string    `json:"addons,omitempty"`
+
+	// The join token will expire after the specified seconds, defaults to 10 years
+	// +optional
+	// +kubebuilder:default:=315569260
+	// +kubebuilder:validation:Minimum:=1
+	JoinTokenTTLInSecs int64 `json:"joinTokenTTLInSecs,omitempty"`
+
+	// List of addons to be enabled upon cluster creation
+	// +optional
+	Addons []string `json:"addons,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -99,9 +82,7 @@ type InitConfiguration struct {
 type JoinConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 
-	ConnectionToken       string `json:"connectionToken,omitempty"`
-	IpOfNodeToConnectTo   string `json:"ipOfNodeToConnectTo,omitempty"`
-	PortOfNodeToConnectTo string `json:"portOfNodeToConnectTo,omitempty"`
+	ConnectionToken string `json:"connectionToken,omitempty"`
 }
 
 // MicroK8sConfigSpec defines the desired state of MicroK8sConfig
@@ -111,7 +92,9 @@ type MicroK8sConfigSpec struct {
 	// InitConfiguration along with ClusterConfiguration are the configurations necessary for the init command
 	// +optional
 	ClusterConfiguration *ClusterConfiguration `json:"clusterConfiguration,omitempty"`
-	InitConfiguration    *InitConfiguration    `json:"initConfiguration,omitempty"`
+
+	InitConfiguration *InitConfiguration `json:"initConfiguration,omitempty"`
+
 	// Foo is an example field of MicroK8sConfig. Edit microk8sconfig_types.go to remove/update
 	JoinConfiguration *JoinConfiguration `json:"joinConfiguration,omitempty"`
 }

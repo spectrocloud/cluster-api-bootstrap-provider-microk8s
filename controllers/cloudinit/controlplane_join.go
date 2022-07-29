@@ -27,6 +27,12 @@ import (
 const (
 	controlPlaneJoinCloudInit = `{{.Header}}
 runcmd:
+- sudo echo ControlPlaneEndpoint {{.ControlPlaneEndpoint}}
+- sudo echo ControlPlaneEndpointType {{.ControlPlaneEndpointType}}
+- sudo echo JoinTokenTTLInSecs {{.JoinTokenTTLInSecs}}
+- sudo echo IPOfNodeToJoin {{.IPOfNodeToJoin}}
+- sudo echo PortOfNodeToJoin {{.PortOfNodeToJoin}}
+- sudo echo Version {{.Version}}
 - sudo iptables -t nat -A OUTPUT -o lo -p tcp --dport 6443 -j REDIRECT --to-port 16443
 - sudo iptables -A PREROUTING -t nat  -p tcp --dport 6443 -j REDIRECT --to-port 16443
 - sudo apt-get update
@@ -46,7 +52,7 @@ runcmd:
 - sudo sh -c "while ! microk8s join {{.IPOfNodeToJoin}}:{{.PortOfNodeToJoin}}/{{.JoinToken}} ; do sleep 10 ; echo 'Retry join'; done"
 - sudo sleep 20
 - sudo microk8s status --wait-ready
-- sudo microk8s add-node --token-ttl 86400 --token {{.JoinToken}}
+- sudo microk8s add-node --token-ttl {{.JoinTokenTTLInSecs}} --token {{.JoinToken}}
 `
 )
 
@@ -57,6 +63,7 @@ type ControlPlaneJoinInput struct {
 	ControlPlaneEndpoint     string
 	ControlPlaneEndpointType string
 	JoinToken                string
+	JoinTokenTTLInSecs       int64
 	IPOfNodeToJoin           string
 	PortOfNodeToJoin         string
 	Version                  string
