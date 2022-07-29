@@ -111,6 +111,10 @@ write_files:
   path: /var/tmp/ca.crt
   permissions: '0600'
 runcmd:
+- sudo echo ControlPlaneEndpoint {{.ControlPlaneEndpoint}}
+- sudo echo ControlPlaneEndpointType {{.ControlPlaneEndpointType}}
+- sudo echo JoinTokenTTLInSecs {{.JoinTokenTTLInSecs}}
+- sudo echo Version {{.Version}}
 - sudo iptables -t nat -A OUTPUT -o lo -p tcp --dport 6443 -j REDIRECT --to-port 16443
 - sudo iptables -A PREROUTING -t nat  -p tcp --dport 6443 -j REDIRECT --to-port 16443
 - sudo apt-get update
@@ -127,7 +131,7 @@ runcmd:
 - sudo sleep 30
 - sudo sed -i '/^DNS.1 = kubernetes/a {{.ControlPlaneEndpointType}}.100 = {{.ControlPlaneEndpoint}}' /var/snap/microk8s/current/certs/csr.conf.template
 - sudo microk8s status --wait-ready
-- sudo microk8s add-node --token-ttl 86400 --token {{.JoinToken}}
+- sudo microk8s add-node --token-ttl {{.JoinTokenTTLInSecs}} --token {{.JoinToken}}
 - sudo sh -c "for a in {{.Addons}} ; do echo 'Enabling ' \$a ; microk8s enable \$a ; sleep 10; microk8s status --wait-ready ; done"
 - sudo sleep 15
 `
@@ -140,8 +144,7 @@ type ControlPlaneInput struct {
 	ControlPlaneEndpoint     string
 	ControlPlaneEndpointType string
 	JoinToken                string
-	ClusterConfiguration     string
-	InitConfiguration        string
+	JoinTokenTTLInSecs       int64
 	Version                  string
 	Addons                   []string
 }

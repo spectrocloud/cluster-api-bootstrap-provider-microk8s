@@ -29,6 +29,7 @@ func TestNewInitControlPlaneCommands(t *testing.T) {
 	cpinput := &ControlPlaneInput{
 		ControlPlaneEndpoint: "lb-ep",
 		JoinToken:            "my_join_token",
+		JoinTokenTTLInSecs:   56789,
 		Version:              "v1.23.3",
 		Addons:               addons,
 	}
@@ -38,7 +39,7 @@ func TestNewInitControlPlaneCommands(t *testing.T) {
 
 	expectedCommands := []string{
 		`snap install microk8s --classic --channel=1.23`,
-		`microk8s add-node --token-ttl 86400 --token my_join_token`,
+		`microk8s add-node --token-ttl 56789 --token my_join_token`,
 		`for a in  'foo'  'bar'  'dns'`,
 	}
 
@@ -53,6 +54,7 @@ func TestNewJoinControlPlaneCommands(t *testing.T) {
 	cpinput := &ControlPlaneJoinInput{
 		ControlPlaneEndpoint: "lb-ep",
 		JoinToken:            "my_join_token",
+		JoinTokenTTLInSecs:   56789,
 		Version:              "v1.24.3",
 		IPOfNodeToJoin:       "1.2.3.4",
 		PortOfNodeToJoin:     "25000",
@@ -63,7 +65,7 @@ func TestNewJoinControlPlaneCommands(t *testing.T) {
 
 	expectedCommands := []string{
 		`snap install microk8s --classic --channel=1.24`,
-		`microk8s add-node --token-ttl 86400 --token my_join_token`,
+		`microk8s add-node --token-ttl 56789 --token my_join_token`,
 		`microk8s join 1.2.3.4:25000`,
 	}
 

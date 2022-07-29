@@ -68,6 +68,8 @@ func init() {
 
 	utilruntime.Must(bootstrapclusterxk8siov1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	rand.Seed(time.Now().UnixNano())
 }
 
 var (

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	bootstrapclusterxk8siov1beta1 "github.com/canonical/cluster-api-bootstrap-provider-microk8s/apis/v1beta1"
@@ -34,6 +35,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -250,14 +252,25 @@ func (r *MicroK8sConfigReconciler) handleClusterNotInitialized(ctx context.Conte
 		return ctrl.Result{}, err
 	}
 
+	token, err := r.getJoinToken(ctx, scope)
+	if err != nil {
+		scope.Info("Failed to get or generate the join token, requeueing")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
 	controlPlaneInput := &cloudinit.ControlPlaneInput{
 		BaseUserData:         cloudinit.BaseUserData{},
 		ControlPlaneEndpoint: scope.Cluster.Spec.ControlPlaneEndpoint.Host,
-		JoinToken:            "abcdefgwijklmnopqrstuvwxyzABCDEF",
+		JoinToken:            token,
+		JoinTokenTTLInSecs:   microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs,
 		Version:              *machine.Spec.Version,
 	}
 	if microk8sConfig.Spec.InitConfiguration != nil && microk8sConfig.Spec.InitConfiguration.Addons != nil {
 		controlPlaneInput.Addons = microk8sConfig.Spec.InitConfiguration.Addons
+	}
+	if microk8sConfig.Spec.InitConfiguration != nil && microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs == 0 {
+		// set by default to 10 years
+		controlPlaneInput.JoinTokenTTLInSecs = 315569260
 	}
 
 	bootstrapInitData, err := cloudinit.NewInitControlPlane(controlPlaneInput)
@@ -301,6 +314,14 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 	}()
 
 	scope.Info("Creating BootstrapData for the join control plane")
+	ipOfNodeToConnectTo, err := r.getControlPlaneNodeToJoin(ctx, scope)
+	if err != nil || ipOfNodeToConnectTo == "" {
+		scope.Info("Failed to discover a control plane IP, requeueing.")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	// TODO: Make this port configurable. Make sure you address the same issue in the controller provider
+	portOfNodeToConnectTo := "2379"
 
 	microk8sConfig := &bootstrapclusterxk8siov1beta1.MicroK8sConfig{}
 	if err := r.Client.Get(ctx, client.ObjectKey{
@@ -309,13 +330,25 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 	}, microk8sConfig); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	token, err := r.getJoinToken(ctx, scope)
+	if err != nil {
+		scope.Info("Failed to get or generate the join token, requeueing")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
 	controlPlaneInput := &cloudinit.ControlPlaneJoinInput{
 		BaseUserData:         cloudinit.BaseUserData{},
 		ControlPlaneEndpoint: scope.Cluster.Spec.ControlPlaneEndpoint.Host,
-		JoinToken:            "abcdefgwijklmnopqrstuvwxyzABCDEF",
-		PortOfNodeToJoin:     microk8sConfig.Spec.JoinConfiguration.PortOfNodeToConnectTo,
-		IPOfNodeToJoin:       microk8sConfig.Spec.JoinConfiguration.IpOfNodeToConnectTo,
+		JoinToken:            token,
+		JoinTokenTTLInSecs:   microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs,
+		PortOfNodeToJoin:     portOfNodeToConnectTo,
+		IPOfNodeToJoin:       ipOfNodeToConnectTo,
 		Version:              *machine.Spec.Version,
+	}
+	if microk8sConfig.Spec.InitConfiguration != nil && microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs == 0 {
+		// set by default to 10 years
+		controlPlaneInput.JoinTokenTTLInSecs = 315569260
 	}
 
 	bootstrapInitData, err := cloudinit.NewJoinControlPlane(controlPlaneInput)
@@ -370,35 +403,22 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 
 	// TODO: Make this port configurable. Make sure you address the same issue in the controller provider
 	portOfNodeToConnectTo := "2379"
-	ipOfNodeToConnectTo := ""
 
-	nodes, err := r.getControlPlaneMachinesForCluster(ctx, util.ObjectKey(scope.Cluster))
-	if err != nil {
-		scope.Error(err, "Lookup control plane nodes")
-		return ctrl.Result{}, err
-	}
-
-	for _, node := range nodes {
-		if ipOfNodeToConnectTo != "" {
-			break
-		}
-		if node.Spec.ProviderID != nil && node.Status.Phase == "Running" {
-			for _, address := range node.Status.Addresses {
-				if address.Address != "" {
-					ipOfNodeToConnectTo = address.Address
-					break
-				}
-			}
-		}
-	}
-	if ipOfNodeToConnectTo == "" {
+	ipOfNodeToConnectTo, err := r.getControlPlaneNodeToJoin(ctx, scope)
+	if err != nil || ipOfNodeToConnectTo == "" {
 		scope.Info("Failed to discover a control plane IP, requeueing.")
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	token, err := r.getJoinToken(ctx, scope)
+	if err != nil {
+		scope.Info("Failed to get or generate the join token, requeueing")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	workerInput := &cloudinit.WorkerJoinInput{
 		BaseUserData:     cloudinit.BaseUserData{},
-		JoinToken:        "abcdefgwijklmnopqrstuvwxyzABCDEF",
+		JoinToken:        token,
 		PortOfNodeToJoin: portOfNodeToConnectTo,
 		IPOfNodeToJoin:   ipOfNodeToConnectTo,
 		Version:          *machine.Spec.Version,
@@ -417,6 +437,29 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *MicroK8sConfigReconciler) getControlPlaneNodeToJoin(ctx context.Context, scope *Scope) (string, error) {
+	nodes, err := r.getControlPlaneMachinesForCluster(ctx, util.ObjectKey(scope.Cluster))
+	if err != nil {
+		scope.Error(err, "Lookup control plane nodes")
+		return "", err
+	}
+	ipOfNodeToConnectTo := ""
+	for _, node := range nodes {
+		if ipOfNodeToConnectTo != "" {
+			break
+		}
+		if node.Spec.ProviderID != nil && node.Status.Phase == "Running" {
+			for _, address := range node.Status.Addresses {
+				if address.Address != "" {
+					ipOfNodeToConnectTo = address.Address
+					break
+				}
+			}
+		}
+	}
+	return ipOfNodeToConnectTo, nil
 }
 
 func (r *MicroK8sConfigReconciler) storeBootstrapData(ctx context.Context, scope *Scope, data []byte) error {
@@ -461,6 +504,58 @@ func (r *MicroK8sConfigReconciler) storeBootstrapData(ctx context.Context, scope
 	scope.Config.Status.Ready = true
 	conditions.MarkTrue(scope.Config, bootstrapclusterxk8siov1beta1.DataSecretAvailableCondition)
 	return nil
+}
+
+func (r *MicroK8sConfigReconciler) getJoinToken(ctx context.Context, scope *Scope) (string, error) {
+	// See if the kubeconfig exists. If not create it.
+	secrets := &corev1.SecretList{}
+	err := r.Client.List(ctx, secrets)
+	if err != nil {
+		return "", err
+	}
+
+	found := false
+	for _, s := range secrets.Items {
+		if s.Name == scope.Cluster.Name+"-jointoken" {
+			found = true
+		}
+	}
+
+	if !found {
+		const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		b := make([]byte, 32)
+		for i := range b {
+			b[i] = letters[rand.Intn(len(letters))]
+		}
+		token := string(b)
+		tokenSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: scope.Cluster.Namespace,
+				Name:      scope.Cluster.Name + "-jointoken",
+			},
+			Data: map[string][]byte{
+				"value": []byte(token),
+			},
+		}
+		err = r.Client.Create(ctx, tokenSecret)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	readTokenSecret := &corev1.Secret{}
+	err = r.Client.Get(ctx,
+		types.NamespacedName{
+			Namespace: scope.Cluster.Namespace,
+			Name:      scope.Cluster.Name + "-jointoken",
+		},
+		readTokenSecret,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return string(readTokenSecret.Data["value"]), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
