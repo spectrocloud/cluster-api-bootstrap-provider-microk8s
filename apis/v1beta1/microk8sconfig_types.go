@@ -77,14 +77,6 @@ type InitConfiguration struct {
 	Addons []string `json:"addons,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type JoinConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
-
-	ConnectionToken string `json:"connectionToken,omitempty"`
-}
-
 // MicroK8sConfigSpec defines the desired state of MicroK8sConfig
 type MicroK8sConfigSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -94,12 +86,7 @@ type MicroK8sConfigSpec struct {
 	ClusterConfiguration *ClusterConfiguration `json:"clusterConfiguration,omitempty"`
 
 	InitConfiguration *InitConfiguration `json:"initConfiguration,omitempty"`
-
-	// Foo is an example field of MicroK8sConfig. Edit microk8sconfig_types.go to remove/update
-	JoinConfiguration *JoinConfiguration `json:"joinConfiguration,omitempty"`
 }
-
-// MicroK8sConfigStatus defines the observed state of MicroK8sConfig
 
 // MicroK8sConfigStatus defines the observed state of MicroK8sConfig
 type MicroK8sConfigStatus struct {
