@@ -7,10 +7,32 @@ The [bootstrap provider controller in cluster API](https://cluster-api.sigs.k8s.
 This project offers a cluster API bootstrap provider controller that manages the node provision of a [MicroK8s](https://github.com/canonical/microk8s) cluster. It is expected to be used along with the respective [MicroK8s specific control plane provider](https://github.com/canonical/cluster-api-control-plane-provider-microk8s).
 
 
-![arch](images/arch.png)
+### Installation
+
+To to configure clusterctl with the two MicroK8s providers edit `~/.cluster-api/clusterctl.yaml`
+and add the following:
+
+```
+providers:
+  - name: "microk8s"
+    url: "https://github.com/canonical/cluster-api-bootstrap-provider-microk8s/releases/latest/bootstrap-components.yaml"
+    type: "BootstrapProvider"
+  - name: "microk8s"
+    url: "https://github.com/canonical/cluster-api-control-plane-provider-microk8s/releases/latest/control-plane-components.yaml"
+    type: "ControlPlaneProvider"
+```
+
+You will now be able now to initialize clusterctl with the MicroK8s providers: 
+
+```
+clusterctl init --bootstrap microk8s --control-plane microk8s -i <infra-provider-of-choice>
+```
+
+Alternatively, you can build the providers manually as described in the following section.
 
 
-# Development
+
+### Building from source
 
   * Install clusterctl following the [upstream instructions](https://cluster-api.sigs.k8s.io/user/quick-start.html#install-clusterctl)
 ```
