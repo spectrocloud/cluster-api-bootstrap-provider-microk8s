@@ -42,7 +42,9 @@ runcmd:
 - sudo echo "Joining"
 - sudo echo "Will join {{.IPOfNodeToJoin}}:{{.PortOfNodeToJoin}}"
 - sudo sh -c "while ! microk8s join {{.IPOfNodeToJoin}}:{{.PortOfNodeToJoin}}/{{.JoinToken}} --worker ; do sleep 10 ; echo 'Retry join'; done"
-- sudo  sed -i '/.*address:.*/d' /var/snap/microk8s/current/args/traefik/provider.yaml
+- sudo sed -i 's/^.*--refresh-interval.*/--refresh-interval=0s/' /var/snap/microk8s/current/args/apiserver-proxy
+- sudo snap restart microk8s.daemon-apiserver-proxy
+- sudo sed -i '/.*address:.*/d' /var/snap/microk8s/current/args/traefik/provider.yaml
 - |
   sudo echo "        - address: {{.ControlPlaneEndpoint}}:6443" >> /var/snap/microk8s/current/args/traefik/provider.yaml
 `
