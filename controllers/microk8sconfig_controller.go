@@ -85,10 +85,10 @@ type Scope struct {
 
 const (
 	defaultDqlitePort  string = "19001"
-	remappedDqlitePort string = "2380"
+	remappedDqlitePort string = "2379"
 
 	defaultClusterAgentPort  string = "25000"
-	remappedClusterAgentPort string = "179"
+	remappedClusterAgentPort string = "30000"
 )
 
 //+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=microk8sconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -306,6 +306,7 @@ func (r *MicroK8sConfigReconciler) handleClusterNotInitialized(ctx context.Conte
 		controlPlaneInput.HTTPSProxy = microk8sConfig.Spec.InitConfiguration.HTTPSProxy
 		controlPlaneInput.HTTPProxy = microk8sConfig.Spec.InitConfiguration.HTTPProxy
 		controlPlaneInput.NoProxy = microk8sConfig.Spec.InitConfiguration.NoProxy
+		controlPlaneInput.IPinIP = microk8sConfig.Spec.InitConfiguration.IPinIP
 
 		if microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs == 0 {
 			// set by default to 10 years
@@ -396,6 +397,8 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 		controlPlaneInput.HTTPSProxy = microk8sConfig.Spec.InitConfiguration.HTTPSProxy
 		controlPlaneInput.HTTPProxy = microk8sConfig.Spec.InitConfiguration.HTTPProxy
 		controlPlaneInput.NoProxy = microk8sConfig.Spec.InitConfiguration.NoProxy
+		controlPlaneInput.IPinIP = microk8sConfig.Spec.InitConfiguration.IPinIP
+
 		if microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs == 0 {
 			// set by default to 10 years
 			controlPlaneInput.JoinTokenTTLInSecs = 315569260

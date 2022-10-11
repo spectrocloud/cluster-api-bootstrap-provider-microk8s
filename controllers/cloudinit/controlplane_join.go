@@ -34,6 +34,8 @@ runcmd:
 - sudo echo Version {{.Version}}
 - sudo sh -c "while ! snap install microk8s --classic {{.Version}}; do sleep 10 ; echo 'Retry snap installation'; done"
 - sudo microk8s status --wait-ready
+- sudo echo "--service-node-port-range=30001-32767" >> /var/snap/microk8s/current/args/kube-apiserver
+{{.IPinIPSection}}
 - sudo microk8s stop
 - sudo sed -i 's/25000/{{.PortOfNodeToJoin}}/' /var/snap/microk8s/current/args/cluster-agent
 - sudo grep Address /var/snap/microk8s/current/var/kubernetes/backend/info.yaml > /var/tmp/port-update.yaml
@@ -79,6 +81,7 @@ type ControlPlaneJoinInput struct {
 	HTTPSProxy               *string
 	HTTPProxy                *string
 	NoProxy                  *string
+	IPinIP                   bool
 }
 
 // NewJoinControlPlane returns the user data string to be used on a new control plane instance.
@@ -98,6 +101,9 @@ func NewJoinControlPlane(input *ControlPlaneJoinInput) ([]byte, error) {
 
 	proxyCommands := generateProxyCommands(input.HTTPSProxy, input.HTTPProxy, input.NoProxy)
 	cloudinitStr := strings.Replace(controlPlaneJoinCloudInit, "{{.ProxySection}}", proxyCommands, -1)
+
+	ipinipCommands := generateIPinIPCommands(input.IPinIP)
+	cloudinitStr = strings.Replace(cloudinitStr, "{{.IPinIPSection}}", ipinipCommands, -1)
 
 	userData, err := generate("JoinControlplane", cloudinitStr, input)
 	if err != nil {
