@@ -36,8 +36,10 @@ type WorkerInput struct {
 	ContainerdHTTPSProxy string
 	// ContainerdNoProxy is no_proxy configuration for containerd.
 	ContainerdNoProxy string
-	// JoinNodeIP is the IP address of the node to join
+	// JoinNodeIP is the IP address of the node to join.
 	JoinNodeIP string
+	// Confinement specifies a classic or strict deployment of microk8s snap.
+	Confinement string
 }
 
 func NewJoinWorker(input *WorkerInput) (*CloudConfig, error) {
@@ -53,12 +55,18 @@ func NewJoinWorker(input *WorkerInput) (*CloudConfig, error) {
 		return nil, fmt.Errorf("kubernetes version %q is not a semantic version: %w", input.KubernetesVersion, err)
 	}
 
+	// strict confinement is only available for microk8s v1.25+
+	if input.Confinement == "strict" && kubernetesVersion.Minor() < 25 {
+		return nil, fmt.Errorf("strict confinement is only available for microk8s v1.25+")
+	}
+	installArgs := createInstallArgs(input.Confinement, kubernetesVersion)
+
 	cloudConfig := NewBaseCloudConfig()
 
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
 		"set -x",
 		scriptPath(disableHostServicesScript),
-		fmt.Sprintf("%s %d.%d", scriptPath(installMicroK8sScript), kubernetesVersion.Major(), kubernetesVersion.Minor()),
+		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
 		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
 		"microk8s status --wait-ready",
 		fmt.Sprintf("%s %q", scriptPath(configureClusterAgentPortScript), input.ClusterAgentPort),

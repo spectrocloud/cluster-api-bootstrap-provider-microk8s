@@ -69,6 +69,11 @@ type InitConfiguration struct {
 	// The optional IPinIP configuration
 	// +optional
 	IPinIP bool `json:"IPinIP,omitempty"`
+
+	// The confinement (strict or classic) configuration
+	// +optional
+	// +kubebuilder:validation:Enum=classic;strict
+	Confinement string `json:"Confinement,omitempty"`
 }
 
 // MicroK8sConfigSpec defines the desired state of MicroK8sConfig
