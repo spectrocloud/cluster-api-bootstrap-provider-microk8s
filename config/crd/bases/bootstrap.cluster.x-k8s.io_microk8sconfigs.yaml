@@ -91,6 +91,12 @@ spec:
                       schemas to the latest internal value, and may reject unrecognized
                       values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                     type: string
+                  extraKubeletArgs:
+                    description: ExtraKubeletArgs is a list of extra arguments to
+                      add to the kubelet.
+                    items:
+                      type: string
+                    type: array
                   extraWriteFiles:
                     description: ExtraWriteFiles is a list of extra files to inject
                       with cloud-init.
