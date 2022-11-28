@@ -76,6 +76,16 @@ spec:
                           IPinIP:
                             description: The optional IPinIP configuration
                             type: boolean
+                          RiskLevel:
+                            default: stable
+                            description: The risk-level (stable, candidate, beta,
+                              or edge) for the snaps
+                            enum:
+                            - stable
+                            - candidate
+                            - beta
+                            - edge
+                            type: string
                           addons:
                             description: List of addons to be enabled upon cluster
                               creation
