@@ -51,6 +51,8 @@ type ControlPlaneJoinInput struct {
 	Confinement string
 	// RiskLevel specifies the risk level (strict, candidate, beta, edge) for the snap channels.
 	RiskLevel string
+	// ExtraWriteFiles is a list of extra files to inject with cloud-init.
+	ExtraWriteFiles []File
 }
 
 func NewJoinControlPlane(input *ControlPlaneJoinInput) (*CloudConfig, error) {
@@ -81,6 +83,7 @@ func NewJoinControlPlane(input *ControlPlaneJoinInput) (*CloudConfig, error) {
 	installArgs := createInstallArgs(input.Confinement, input.RiskLevel, kubernetesVersion)
 
 	cloudConfig := NewBaseCloudConfig()
+	cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, input.ExtraWriteFiles...)
 
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
 		"set -x",

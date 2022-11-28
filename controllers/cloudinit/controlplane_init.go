@@ -57,6 +57,8 @@ type ControlPlaneInitInput struct {
 	Confinement string
 	// RiskLevel specifies the risk level (strict, candidate, beta, edge) for the snap channels.
 	RiskLevel string
+	// ExtraWriteFiles is a list of extra files to inject with cloud-init.
+	ExtraWriteFiles []File
 }
 
 func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
@@ -106,6 +108,7 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 		File{Content: input.CAKey, Path: filepath.Join("/var", "tmp", "ca.key"), Permissions: "0600", Owner: "root:root"},
 		File{Content: input.CACert, Path: filepath.Join("/var", "tmp", "ca.crt"), Permissions: "0600", Owner: "root:root"},
 	)
+	cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, input.ExtraWriteFiles...)
 
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
 		"set -x",
