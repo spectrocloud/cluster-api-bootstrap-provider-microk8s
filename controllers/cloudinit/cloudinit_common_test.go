@@ -17,6 +17,7 @@ limitations under the License.
 package cloudinit_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -29,53 +30,65 @@ func TestCloudConfigInput(t *testing.T) {
 	t.Run("ChannelAndRiskLevel", func(t *testing.T) {
 		for _, tc := range []struct {
 			name            string
-			makeCloudConfig func() (*cloudinit.CloudConfig, error)
+			makeCloudConfig func(confinement, risk string) (*cloudinit.CloudConfig, error)
 		}{
 			{
 				name: "ControlPlaneInit",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+				makeCloudConfig: func(confinement, risk string) (*cloudinit.CloudConfig, error) {
 					return cloudinit.NewInitControlPlane(&cloudinit.ControlPlaneInitInput{
 						KubernetesVersion: "v1.25.0",
+						Confinement:       confinement,
 						Token:             strings.Repeat("a", 32),
 						TokenTTL:          100,
-						Confinement:       "strict",
-						RiskLevel:         "edge",
+						RiskLevel:         risk,
 					})
 				},
 			},
 			{
 				name: "ControlPlaneJoin",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+				makeCloudConfig: func(confinement, risk string) (*cloudinit.CloudConfig, error) {
 					return cloudinit.NewJoinControlPlane(&cloudinit.ControlPlaneJoinInput{
 						KubernetesVersion: "v1.25.0",
+						Confinement:       confinement,
 						Token:             strings.Repeat("a", 32),
 						TokenTTL:          100,
-						Confinement:       "strict",
-						RiskLevel:         "edge",
+						RiskLevel:         risk,
 					})
 				},
 			},
 			{
 				name: "Worker",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+				makeCloudConfig: func(confinement, risk string) (*cloudinit.CloudConfig, error) {
 					return cloudinit.NewJoinWorker(&cloudinit.WorkerInput{
 						KubernetesVersion: "v1.25.0",
+						Confinement:       confinement,
 						Token:             strings.Repeat("a", 32),
-						Confinement:       "strict",
-						RiskLevel:         "edge",
+						RiskLevel:         risk,
 					})
 				},
 			},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
-				g := NewWithT(t)
-				c, err := tc.makeCloudConfig()
-				g.Expect(err).NotTo(HaveOccurred())
+				for _, confinement := range []string{"strict", "classic"} {
+					t.Run(confinement, func(t *testing.T) {
+						for _, risk := range []string{"stable", "candidate", "beta", "edge"} {
+							t.Run(risk, func(t *testing.T) {
+								g := NewWithT(t)
+								c, err := tc.makeCloudConfig(confinement, risk)
+								g.Expect(err).NotTo(HaveOccurred())
 
-				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/00-install-microk8s.sh "--channel 1.25-strict/edge"`))
+								if confinement == "classic" {
+									g.Expect(c.RunCommands).To(ContainElement(fmt.Sprintf(`/capi-scripts/00-install-microk8s.sh "--channel 1.25/%s --classic"`, risk)))
+								} else {
+									g.Expect(c.RunCommands).To(ContainElement(fmt.Sprintf(`/capi-scripts/00-install-microk8s.sh "--channel 1.25-strict/%s"`, risk)))
+								}
 
-				_, err = cloudinit.GenerateCloudConfig(c)
-				g.Expect(err).NotTo(HaveOccurred())
+								_, err = cloudinit.GenerateCloudConfig(c)
+								g.Expect(err).NotTo(HaveOccurred())
+							})
+						}
+					})
+				}
 			})
 		}
 	})
