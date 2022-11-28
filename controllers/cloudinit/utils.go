@@ -19,6 +19,7 @@ package cloudinit
 import (
 	"fmt"
 
+	bootstrapclusterxk8siov1beta1 "github.com/canonical/cluster-api-bootstrap-provider-microk8s/apis/v1beta1"
 	"k8s.io/apimachinery/pkg/util/version"
 )
 
@@ -40,4 +41,20 @@ func createInstallArgs(confinement string, riskLevel string, kubernetesVersion *
 	}
 
 	return installArgs
+}
+
+func WriteFilesFromAPI(files []bootstrapclusterxk8siov1beta1.CloudInitWriteFile) []File {
+	if len(files) == 0 {
+		return nil
+	}
+	result := make([]File, 0, len(files))
+	for _, f := range files {
+		result = append(result, File{
+			Content:     f.Content,
+			Path:        f.Path,
+			Permissions: f.Permissions,
+			Owner:       f.Owner,
+		})
+	}
+	return result
 }

@@ -80,6 +80,22 @@ type InitConfiguration struct {
 	// +kubebuilder:validation:Enum=stable;candidate;beta;edge
 	// +kubebuilder:default:=stable
 	RiskLevel string `json:"RiskLevel,omitempty"`
+
+	// ExtraWriteFiles is a list of extra files to inject with cloud-init.
+	// +optional
+	ExtraWriteFiles []CloudInitWriteFile `json:"extraWriteFiles,omitempty"`
+}
+
+// CloudInitWriteFile is a file that will be injected by cloud-init
+type CloudInitWriteFile struct {
+	// Content of the file to create.
+	Content string `json:"content"`
+	// Path where the file should be created.
+	Path string `json:"path"`
+	// Permissions of the file to create, e.g. "0600"
+	Permissions string `json:"permissions"`
+	// Owner of the file to create, e.g. "root:root"
+	Owner string `json:"owner"`
 }
 
 // MicroK8sConfigSpec defines the desired state of MicroK8sConfig

@@ -98,6 +98,33 @@ spec:
                               convert recognized schemas to the latest internal value,
                               and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                             type: string
+                          extraWriteFiles:
+                            description: ExtraWriteFiles is a list of extra files
+                              to inject with cloud-init.
+                            items:
+                              description: CloudInitWriteFile is a file that will
+                                be injected by cloud-init
+                              properties:
+                                content:
+                                  description: Content of the file to create.
+                                  type: string
+                                owner:
+                                  description: Owner of the file to create, e.g. "root:root"
+                                  type: string
+                                path:
+                                  description: Path where the file should be created.
+                                  type: string
+                                permissions:
+                                  description: Permissions of the file to create,
+                                    e.g. "0600"
+                                  type: string
+                              required:
+                              - content
+                              - owner
+                              - path
+                              - permissions
+                              type: object
+                            type: array
                           httpProxy:
                             description: The optional http proxy configuration
                             type: string
