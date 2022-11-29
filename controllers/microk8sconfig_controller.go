@@ -303,6 +303,7 @@ func (r *MicroK8sConfigReconciler) handleClusterNotInitialized(ctx context.Conte
 		ContainerdHTTPSProxy: microk8sConfig.Spec.InitConfiguration.HTTPSProxy,
 		ContainerdNoProxy:    microk8sConfig.Spec.InitConfiguration.NoProxy,
 		ExtraWriteFiles:      cloudinit.WriteFilesFromAPI(microk8sConfig.Spec.InitConfiguration.ExtraWriteFiles),
+		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
 	}
 	if controlPlaneInput.TokenTTL == 0 {
 		controlPlaneInput.TokenTTL = 315569260
@@ -396,6 +397,7 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 		ContainerdHTTPSProxy: microk8sConfig.Spec.InitConfiguration.HTTPSProxy,
 		ContainerdNoProxy:    microk8sConfig.Spec.InitConfiguration.NoProxy,
 		ExtraWriteFiles:      cloudinit.WriteFilesFromAPI(microk8sConfig.Spec.InitConfiguration.ExtraWriteFiles),
+		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
 	}
 	if controlPlaneInput.TokenTTL == 0 {
 		controlPlaneInput.TokenTTL = 315569260
@@ -479,6 +481,7 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 		ClusterAgentPort:  portOfNodeToConnectTo,
 		JoinNodeIP:        ipOfNodeToConnectTo,
 		ExtraWriteFiles:   cloudinit.WriteFilesFromAPI(microk8sConfig.Spec.InitConfiguration.ExtraWriteFiles),
+		ExtraKubeletArgs:  microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
 	}
 
 	if c := microk8sConfig.Spec.InitConfiguration; c != nil {

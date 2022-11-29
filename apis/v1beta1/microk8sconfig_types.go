@@ -84,6 +84,10 @@ type InitConfiguration struct {
 	// ExtraWriteFiles is a list of extra files to inject with cloud-init.
 	// +optional
 	ExtraWriteFiles []CloudInitWriteFile `json:"extraWriteFiles,omitempty"`
+
+	// ExtraKubeletArgs is a list of extra arguments to add to the kubelet.
+	// +optional
+	ExtraKubeletArgs []string `json:"extraKubeletArgs,omitempty"`
 }
 
 // CloudInitWriteFile is a file that will be injected by cloud-init
