@@ -225,6 +225,37 @@ microk8s kubectl apply -f cluster-azure.yaml
 
 > **Note**: Make sure you have the secret to include the password of the Service Principal identity. This secret will be referenced by the AzureClusterIdentity used by the AzureCluster.
 
+#### GCP
+
+> *NOTE*: Ensure that you have properly deployed the GCP infrastructure provider prior to executing the commands below. See [Initialization for common providers](https://cluster-api.sigs.k8s.io/user/quick-start.html#initialization-for-common-providers)
+
+Prior to generate a cluster template, you need to create a VM image for use in the cluster. The MicroK8s provider works with any stock Ubuntu image. Use the Ubuntu 22.04 LTS image with:
+
+```bash
+gcloud compute images create ubuntu-2204 --source-image-project ubuntu-os-cloud --source-image-family ubuntu-2204-lts
+```
+
+Make note of the name of the image `ubuntu-2204`, which we then feed into the cluster template.
+
+Generate a cluster template with:
+
+```bash
+# review list of variables needed for the cluster template
+clusterctl generate cluster microk8s-gcp --from ./templates/cluster-template-gcp.yaml --list-variables
+
+# set environment variables (edit the file as needed before sourcing it)
+source ./templates/cluster-template-gcp.rc
+
+# generate the cluster
+clusterctl generate cluster microk8s-gcp --from ./templates/cluster-template-gcp.yaml > cluster-gcp.yaml
+```
+
+Then, deploy the cluster with:
+
+```bash
+microk8s kubectl apply -f cluster-gcp.yaml
+```
+
 ## Development
 
 The two MicroK8s CAPI providers, the bootstrap and control plane, serve distinct purposes:
