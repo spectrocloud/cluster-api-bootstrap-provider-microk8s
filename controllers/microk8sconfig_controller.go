@@ -302,6 +302,8 @@ func (r *MicroK8sConfigReconciler) handleClusterNotInitialized(ctx context.Conte
 		ContainerdHTTPProxy:  microk8sConfig.Spec.InitConfiguration.HTTPProxy,
 		ContainerdHTTPSProxy: microk8sConfig.Spec.InitConfiguration.HTTPSProxy,
 		ContainerdNoProxy:    microk8sConfig.Spec.InitConfiguration.NoProxy,
+		Confinement:          microk8sConfig.Spec.InitConfiguration.Confinement,
+		RiskLevel:            microk8sConfig.Spec.InitConfiguration.RiskLevel,
 		ExtraWriteFiles:      cloudinit.WriteFilesFromAPI(microk8sConfig.Spec.InitConfiguration.ExtraWriteFiles),
 		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
 	}
@@ -396,6 +398,8 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 		ContainerdHTTPProxy:  microk8sConfig.Spec.InitConfiguration.HTTPProxy,
 		ContainerdHTTPSProxy: microk8sConfig.Spec.InitConfiguration.HTTPSProxy,
 		ContainerdNoProxy:    microk8sConfig.Spec.InitConfiguration.NoProxy,
+		RiskLevel:            microk8sConfig.Spec.InitConfiguration.RiskLevel,
+		Confinement:          microk8sConfig.Spec.InitConfiguration.Confinement,
 		ExtraWriteFiles:      cloudinit.WriteFilesFromAPI(microk8sConfig.Spec.InitConfiguration.ExtraWriteFiles),
 		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
 	}
@@ -487,6 +491,9 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 		workerInput.ContainerdHTTPSProxy = c.HTTPSProxy
 		workerInput.ContainerdHTTPProxy = c.HTTPProxy
 		workerInput.ContainerdNoProxy = c.NoProxy
+
+		workerInput.Confinement = c.Confinement
+		workerInput.RiskLevel = c.RiskLevel
 
 		workerInput.ExtraKubeletArgs = c.ExtraKubeletArgs
 		workerInput.ExtraWriteFiles = cloudinit.WriteFilesFromAPI(c.ExtraWriteFiles)
