@@ -53,4 +53,4 @@ if [ ${1} == "no" ]; then
     echo "Waiting for the cluster to come up"
     sleep 5
   done
-then
+fi
