@@ -19,6 +19,8 @@ kind: OpenStackCluster
 metadata:
   name: ${CLUSTER_NAME}
 spec:
+  apiServerLoadBalancer:
+    enabled: ${OPENSTACK_USE_OCTAVIA_LOADBALANCER}
   cloudName: ${OPENSTACK_CLOUD}
   identityRef:
     name: ${OPENSTACK_CLOUD_CONFIG_SECRET_NAME}
