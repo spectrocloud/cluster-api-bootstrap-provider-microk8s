@@ -1,11 +1,5 @@
-ARCH ?= amd64
-ALL_ARCH = amd64 arm64
 SPECTRO_VERSION ?= 4.1.0-dev
 TAG ?= v0.4.0-spectro-${SPECTRO_VERSION}
-
-BUILDER_GOLANG_VERSION ?= 1.21
-BUILD_ARGS = --build-arg CRYPTO_LIB=${FIPS_ENABLE} --build-arg BUILDER_GOLANG_VERSION=${BUILDER_GOLANG_VERSION}
-
 # Image URL to use all building/pushing image targets
 REGISTRY ?= gcr.io/spectro-dev-public/$(USER)/capi-bootstrap-provider-microk8s
 IMG ?= ${REGISTRY}:${TAG}
