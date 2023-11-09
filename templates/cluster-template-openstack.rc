@@ -21,6 +21,11 @@ export OPENSTACK_SSH_KEY_NAME=my-ssh-key
 export OPENSTACK_NETWORK_CIDR=10.6.0.0/24
 export OPENSTACK_DNS_NAMESERVERS=
 
+# OpenStack control plane configuration.
+# Set this to 'false' to use a simple Floating IP for the control plane (works everywhere)
+# Set this to 'true' to use an Octavia LoadBalancer for the control plane (requires octavia support in the cloud)
+export OPENSTACK_USE_OCTAVIA_LOADBALANCER=false
+
 # (optional) Containerd HTTP proxy configuration. Leave empty if not required.
 export CONTAINERD_HTTP_PROXY=""
 export CONTAINERD_HTTPS_PROXY=""
