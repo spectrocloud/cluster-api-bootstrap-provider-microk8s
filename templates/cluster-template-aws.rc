@@ -1,5 +1,5 @@
 # Kubernetes cluster configuration
-export KUBERNETES_VERSION=1.24.0
+export KUBERNETES_VERSION=1.25.0
 export CONTROL_PLANE_MACHINE_COUNT=1
 export WORKER_MACHINE_COUNT=1
 
@@ -12,3 +12,10 @@ export AWS_PUBLIC_IP=false
 export AWS_CONTROL_PLANE_MACHINE_FLAVOR=t3.large
 export AWS_NODE_MACHINE_FLAVOR=t3.large
 export AWS_SSH_KEY_NAME=my-ssh-key
+
+# (optional) Snap risk level and confinement
+export SNAP_RISKLEVEL=""
+export SNAP_CONFINEMENT=""
+
+# Upgrade configuration
+export UPGRADE_STRATEGY=SmartUpgrade

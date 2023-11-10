@@ -1,5 +1,5 @@
-# Based on https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v1.5.0/cluster-template.yaml
----
+# Based on: https://github.com/kubernetes-sigs/cluster-api-provider-azure/releases/download/v1.5.3/cluster-template.yaml
+
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
@@ -7,7 +7,7 @@ metadata:
 spec:
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-    kind: AWSCluster
+    kind: AzureCluster
     name: ${CLUSTER_NAME}
   controlPlaneRef:
     kind: MicroK8sControlPlane
@@ -15,14 +15,27 @@ spec:
     name: ${CLUSTER_NAME}-control-plane
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSCluster
+kind: AzureCluster
 metadata:
   name: ${CLUSTER_NAME}
 spec:
-  region: ${AWS_REGION}
-  sshKeyName: ${AWS_SSH_KEY_NAME}
-  bastion:
-    enabled: ${AWS_CREATE_BASTION:=false}
+  identityRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: AzureClusterIdentity
+    name: ${CLUSTER_IDENTITY_NAME}
+  location: ${AZURE_LOCATION}
+  networkSpec:
+    subnets:
+    - name: control-plane-subnet
+      role: control-plane
+    - name: node-subnet
+      natGateway:
+        name: node-natgateway
+      role: node
+    vnet:
+      name: ${AZURE_VNET_NAME:=${CLUSTER_NAME}-vnet}
+  resourceGroup: ${AZURE_RESOURCE_GROUP:=${CLUSTER_NAME}}
+  subscriptionID: ${AZURE_SUBSCRIPTION_ID}
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: MicroK8sControlPlane
@@ -31,7 +44,7 @@ metadata:
 spec:
   controlPlaneConfig:
     initConfiguration:
-      joinTokenTTLInSecs: 900000
+      joinTokenTTLInSecs: 9000
       IPinIP: true
       addons:
         - dns
@@ -43,58 +56,60 @@ spec:
   machineTemplate:
     infrastructureTemplate:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-      kind: AWSMachineTemplate
+      kind: AzureMachineTemplate
       name: "${CLUSTER_NAME}-control-plane"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
   version: "v${KUBERNETES_VERSION}"
   upgradeStrategy: "${UPGRADE_STRATEGY}"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSMachineTemplate
+kind: AzureMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-control-plane
 spec:
   template:
     spec:
-      iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: ${AWS_CONTROL_PLANE_INSTANCE_TYPE:=t3.large}
-      publicIP: ${AWS_PUBLIC_IP:=false}
-      sshKeyName: ${AWS_SSH_KEY_NAME}
+      osDisk:
+        diskSizeGB: 128
+        osType: Linux
+      sshPublicKey: ${AZURE_SSH_PUBLIC_KEY_B64:=""}
+      vmSize: ${AZURE_CONTROL_PLANE_MACHINE_TYPE}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: "${CLUSTER_NAME}-md-0"
+  name: ${CLUSTER_NAME}-md-0
 spec:
-  clusterName: "${CLUSTER_NAME}"
+  clusterName: ${CLUSTER_NAME}
   replicas: ${WORKER_MACHINE_COUNT:=1}
   selector:
-    matchLabels:
+    matchLabels: null
   template:
     spec:
-      clusterName: "${CLUSTER_NAME}"
-      version: "${KUBERNETES_VERSION}"
       bootstrap:
         configRef:
           name: "${CLUSTER_NAME}-md-0"
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: MicroK8sConfigTemplate
+      clusterName: ${CLUSTER_NAME}
       infrastructureRef:
-        name: "${CLUSTER_NAME}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta
-        kind: AWSMachineTemplate
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: AzureMachineTemplate
+        name: ${CLUSTER_NAME}-md-0
+      version: ${KUBERNETES_VERSION}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSMachineTemplate
+kind: AzureMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-md-0
 spec:
   template:
     spec:
-      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: ${AWS_NODE_INSTANCE_TYPE:=t3.large}
-      publicIP: ${AWS_PUBLIC_IP:=false}
-      sshKeyName: ${AWS_SSH_KEY_NAME}
+      osDisk:
+        diskSizeGB: 128
+        osType: Linux
+      sshPublicKey: ${AZURE_SSH_PUBLIC_KEY_B64:=""}
+      vmSize: ${AZURE_NODE_MACHINE_TYPE}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: MicroK8sConfigTemplate
@@ -108,3 +123,18 @@ spec:
       initConfiguration:
         riskLevel: "${SNAP_RISKLEVEL:=}"
         confinement: "${SNAP_CONFINEMENT:=}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: AzureClusterIdentity
+metadata:
+  labels:
+    clusterctl.cluster.x-k8s.io/move-hierarchy: "true"
+  name: ${CLUSTER_IDENTITY_NAME}
+spec:
+  type: ServicePrincipal
+  clientID: ${AZURE_CLIENT_ID}
+  clientSecret:
+    name: ${AZURE_CLUSTER_IDENTITY_SECRET_NAME}
+    namespace: ${AZURE_CLUSTER_IDENTITY_SECRET_NAMESPACE}
+  tenantID: ${AZURE_TENANT_ID}
+  allowedNamespaces: {}

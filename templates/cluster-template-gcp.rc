@@ -1,0 +1,23 @@
+# Kubernetes cluster configuration
+export KUBERNETES_VERSION=1.25.0
+export CONTROL_PLANE_MACHINE_COUNT=1
+export WORKER_MACHINE_COUNT=1
+
+# GCP configuration
+export GCP_REGION="europe-west"
+export GCP_NETWORK_NAME="default"
+export GCP_PROJECT="my-gcp-project-name"
+
+# GCP machine configuration
+export GCP_PUBLIC_IP=true              # set to false if you have configured a cloud NAT
+export GCP_CONTROL_PLANE_MACHINE_TYPE=n1-standard-2
+export GCP_NODE_MACHINE_TYPE=n1-standard-2
+export IMAGE_ID=projects/$GCP_PROJECT/global/images/ubuntu-2204
+
+# (optional) Snap risk level and confinement
+export SNAP_RISKLEVEL=""
+export SNAP_CONFINEMENT=""
+
+
+# Upgrade configuration
+export UPGRADE_STRATEGY=SmartUpgrade

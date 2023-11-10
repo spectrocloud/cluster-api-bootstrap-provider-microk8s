@@ -152,6 +152,35 @@ secret "microk8s-aws-kubeconfig" deleted
 
 > *NOTE*: Ensure that you have properly deployed the OpenStack infrastructure provider prior to executing the commands below. See [Initialization for common providers](https://cluster-api.sigs.k8s.io/user/quick-start.html#initialization-for-common-providers)
 
+Create a cloud-config secret for the OpenStack API in the management cluster with the following command. Make sure to replace the OpenStack credentials in the command below to match your OpenStack cloud. If unsure, consult "Horizon" > "API Access" > "Download OpenStack RC File" > "OpenStack clouds.yaml File".
+
+```bash
+sudo microk8s kubectl create -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloud-config
+  labels:
+    clusterctl.cluster.x-k8s.io/move: "true"
+stringData:
+  cacert: ''
+  clouds.yaml: |
+    clouds:
+      openstack:
+        auth:
+          auth_url: "${OS_AUTH_URL}"
+          username: "${OS_USERNAME}"
+          password: "${OS_PASSWORD}"
+          project_name: "${OS_PROJECT_NAME}"
+          user_domain_name: "${OS_USER_DOMAIN_NAME}"
+          project_domain_name: "${OS_PROJECT_DOMAIN_NAME}"
+        region_name: "${OS_REGION_NAME}"
+        interface: "public"
+        verify: false
+        identity_api_version: 3
+EOF
+```
+
 Generate a cluster template with:
 
 ```bash
@@ -169,6 +198,62 @@ Then deploy the cluster with:
 
 ```bash
 microk8s kubectl apply -f cluster-openstack.yaml
+```
+
+#### Azure
+
+> *NOTE*: Ensure that you have properly deployed the Azure infrastructure provider prior to executing the commands below. See [Initialization for common providers](https://cluster-api.sigs.k8s.io/user/quick-start.html#initialization-for-common-providers)
+
+Generate a cluster template with:
+
+```bash
+# review list of variables needed for the cluster template
+clusterctl generate cluster microk8s-azure --from ./templates/cluster-template-azure.yaml --list-variables
+
+# set environment variables (edit the file as needed before sourcing it)
+source ./templates/cluster-template-azure.rc
+
+# generate cluster
+clusterctl generate cluster microk8s-azure --from ./templates/cluster-template-azure.yaml > cluster-azure.yaml
+```
+
+Then deploy the cluster with:
+
+```bash
+microk8s kubectl apply -f cluster-azure.yaml
+```
+
+> **Note**: Make sure you have the secret to include the password of the Service Principal identity. This secret will be referenced by the AzureClusterIdentity used by the AzureCluster.
+
+#### GCP
+
+> *NOTE*: Ensure that you have properly deployed the GCP infrastructure provider prior to executing the commands below. See [Initialization for common providers](https://cluster-api.sigs.k8s.io/user/quick-start.html#initialization-for-common-providers)
+
+Prior to generate a cluster template, you need to create a VM image for use in the cluster. The MicroK8s provider works with any stock Ubuntu image. Use the Ubuntu 22.04 LTS image with:
+
+```bash
+gcloud compute images create ubuntu-2204 --source-image-project ubuntu-os-cloud --source-image-family ubuntu-2204-lts
+```
+
+Make note of the name of the image `ubuntu-2204`, which we then feed into the cluster template.
+
+Generate a cluster template with:
+
+```bash
+# review list of variables needed for the cluster template
+clusterctl generate cluster microk8s-gcp --from ./templates/cluster-template-gcp.yaml --list-variables
+
+# set environment variables (edit the file as needed before sourcing it)
+source ./templates/cluster-template-gcp.rc
+
+# generate the cluster
+clusterctl generate cluster microk8s-gcp --from ./templates/cluster-template-gcp.yaml > cluster-gcp.yaml
+```
+
+Then, deploy the cluster with:
+
+```bash
+microk8s kubectl apply -f cluster-gcp.yaml
 ```
 
 ## Development

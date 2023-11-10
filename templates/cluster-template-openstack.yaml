@@ -5,10 +5,6 @@ kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
 spec:
-  clusterNetwork:
-    pods:
-      cidrBlocks: ["10.1.0.0/16"] # CIDR block used by Calico.
-    serviceDomain: "cluster.local"
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha5
     kind: OpenStackCluster
@@ -25,11 +21,11 @@ metadata:
 spec:
   cloudName: ${OPENSTACK_CLOUD}
   identityRef:
-    name: ${CLUSTER_NAME}-cloud-config
+    name: ${OPENSTACK_CLOUD_CONFIG_SECRET_NAME}
     kind: Secret
-  nodeCidr: 10.6.0.0/24
+  nodeCidr: ${OPENSTACK_NETWORK_CIDR}
   disablePortSecurity: true
-  dnsNameservers: []
+  dnsNameservers: [${OPENSTACK_DNS_NAMESERVERS:= }]
   externalNetworkId: ${OPENSTACK_EXTERNAL_NETWORK_ID:=""}
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -39,10 +35,15 @@ metadata:
 spec:
   controlPlaneConfig:
     initConfiguration:
-      joinTokenTTLInSecs: 9000
+      joinTokenTTLInSecs: 900000
       addons:
         - dns
         - ingress
+      httpProxy: "${CONTAINERD_HTTP_PROXY:=}"
+      httpsProxy: "${CONTAINERD_HTTPS_PROXY:=}"
+      noProxy: "${CONTAINERD_NO_PROXY:=}"
+      riskLevel: "${SNAP_RISKLEVEL:=}"
+      confinement: "${SNAP_CONFINEMENT:=}"
     clusterConfiguration:
       portCompatibilityRemap: true
   machineTemplate:
@@ -52,6 +53,7 @@ spec:
       name: "${CLUSTER_NAME}-control-plane"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
   version: "v${KUBERNETES_VERSION}"
+  upgradeStrategy: "${UPGRADE_STRATEGY}"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha5
 kind: OpenStackMachineTemplate
@@ -65,7 +67,7 @@ spec:
       sshKeyName: ${OPENSTACK_SSH_KEY_NAME}
       cloudName: ${OPENSTACK_CLOUD}
       identityRef:
-        name: ${CLUSTER_NAME}-cloud-config
+        name: ${OPENSTACK_CLOUD_CONFIG_SECRET_NAME}
         kind: Secret
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
@@ -101,7 +103,7 @@ spec:
     spec:
       cloudName: ${OPENSTACK_CLOUD}
       identityRef:
-        name: ${CLUSTER_NAME}-cloud-config
+        name: ${OPENSTACK_CLOUD_CONFIG_SECRET_NAME}
         kind: Secret
       flavor: ${OPENSTACK_NODE_MACHINE_FLAVOR}
       image: ${OPENSTACK_IMAGE_NAME}
@@ -116,13 +118,9 @@ spec:
     spec:
       clusterConfiguration:
         portCompatibilityRemap: true
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ${CLUSTER_NAME}-cloud-config
-  labels:
-    clusterctl.cluster.x-k8s.io/move: "true"
-data:
-  clouds.yaml: ${OPENSTACK_CLOUD_YAML_B64}
-  cacert: ${OPENSTACK_CLOUD_CACERT_B64:=Cg==}
+      initConfiguration:
+        httpProxy: "${CONTAINERD_HTTP_PROXY:=}"
+        httpsProxy: "${CONTAINERD_HTTPS_PROXY:=}"
+        noProxy: "${CONTAINERD_NO_PROXY:=}"
+        riskLevel: "${SNAP_RISKLEVEL:=}"
+        confinement: "${SNAP_CONFINEMENT:=}"

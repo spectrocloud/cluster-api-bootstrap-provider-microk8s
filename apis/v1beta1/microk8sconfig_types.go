@@ -17,9 +17,6 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-	"net"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -42,36 +39,10 @@ type ClusterConfiguration struct {
 	PortCompatibilityRemap bool `json:"portCompatibilityRemap,omitempty"`
 }
 
-type APIEndpoint struct {
-	// The hostname on which the API server is serving.
-	Host string `json:"host"`
-
-	// The port on which the API server is serving.
-	Port int32 `json:"port"`
-}
-
-// IsZero returns true if both host and port are zero values.
-func (v APIEndpoint) IsZero() bool {
-	return v.Host == "" && v.Port == 0
-}
-
-// IsValid returns true if both host and port are non-zero values.
-func (v APIEndpoint) IsValid() bool {
-	return v.Host != "" && v.Port != 0
-}
-
-// String returns a formatted version HOST:PORT of this APIEndpoint.
-func (v APIEndpoint) String() string {
-	return net.JoinHostPort(v.Host, fmt.Sprintf("%d", v.Port))
-}
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type InitConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
-
-	// +optional
-	LocalAPIEndpoint APIEndpoint `json:"localAPIEndpoint,omitempty"`
 
 	// The join token will expire after the specified seconds, defaults to 10 years
 	// +optional
@@ -81,15 +52,15 @@ type InitConfiguration struct {
 
 	// The optional https proxy configuration
 	// +optional
-	HTTPSProxy *string `json:"httpsProxy,omitempty"`
+	HTTPSProxy string `json:"httpsProxy,omitempty"`
 
 	// The optional http proxy configuration
 	// +optional
-	HTTPProxy *string `json:"httpProxy,omitempty"`
+	HTTPProxy string `json:"httpProxy,omitempty"`
 
 	// The optional no proxy configuration
 	// +optional
-	NoProxy *string `json:"noProxy,omitempty"`
+	NoProxy string `json:"noProxy,omitempty"`
 
 	// List of addons to be enabled upon cluster creation
 	// +optional
@@ -98,6 +69,53 @@ type InitConfiguration struct {
 	// The optional IPinIP configuration
 	// +optional
 	IPinIP bool `json:"IPinIP,omitempty"`
+
+	// The confinement (strict or classic) configuration
+	// +optional
+	// +kubebuilder:validation:Enum=classic;strict
+	Confinement string `json:"confinement,omitempty"`
+
+	// The risk-level (stable, candidate, beta, or edge) for the snaps
+	// +optional
+	// +kubebuilder:validation:Enum=stable;candidate;beta;edge
+	// +kubebuilder:default:=stable
+	RiskLevel string `json:"riskLevel,omitempty"`
+
+	// The snap store proxy domain
+	// +optional
+	SnapstoreProxyDomain string `json:"snapstoreProxyDomain,omitempty"`
+
+	// The snap store proxy ID
+	// +optional
+	SnapstoreProxyId string `json:"snapstoreProxyId,omitempty"`
+
+	// Optional http proxy configuration for the snap store
+	// +optional
+	SnapstoreHTTPProxy string `json:"snapstoreHTTPProxy,omitempty"`
+
+	// Optional https proxy configuration for the snap store
+	// +optional
+	SnapstoreHTTPSProxy string `json:"snapstoreHTTPSProxy,omitempty"`
+
+	// ExtraWriteFiles is a list of extra files to inject with cloud-init.
+	// +optional
+	ExtraWriteFiles []CloudInitWriteFile `json:"extraWriteFiles,omitempty"`
+
+	// ExtraKubeletArgs is a list of extra arguments to add to the kubelet.
+	// +optional
+	ExtraKubeletArgs []string `json:"extraKubeletArgs,omitempty"`
+}
+
+// CloudInitWriteFile is a file that will be injected by cloud-init
+type CloudInitWriteFile struct {
+	// Content of the file to create.
+	Content string `json:"content"`
+	// Path where the file should be created.
+	Path string `json:"path"`
+	// Permissions of the file to create, e.g. "0600"
+	Permissions string `json:"permissions"`
+	// Owner of the file to create, e.g. "root:root"
+	Owner string `json:"owner"`
 }
 
 // MicroK8sConfigSpec defines the desired state of MicroK8sConfig

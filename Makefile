@@ -69,12 +69,16 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: e2e
+e2e: fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go clean -testcache
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -tags=integration -v -timeout 6h ./integration
+
 ##@ Build
 
 .PHONY: component
 component: manifests kustomize ## Produce the bootstrap-components.yaml.
-	$(KUSTOMIZE) build config/crd/ > $(COMPSFILE)
-	echo "---" >> $(COMPSFILE)
+	echo "---" > $(COMPSFILE)
 	$(KUSTOMIZE) build config/default/ >> $(COMPSFILE)
 
 .PHONY: build
@@ -118,7 +122,7 @@ docker-push-manifest: ## Push the fat manifest docker image.
 
 .PHONY: lint
 lint: golangci-lint ## Lint the codebase
-	$(GOLANGCI_LINT) run -v
+	$(GOLANGCI_LINT) run -v --go=1.19 --timeout 3m0s
 
 ##@ Deployment
 
@@ -146,8 +150,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 .PHONY: golangci-lint
 golangci-lint: ## Download golangci-lint locally if necessary.
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0)
-
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1)
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 .PHONY: controller-gen
@@ -174,6 +177,7 @@ cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
 GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef

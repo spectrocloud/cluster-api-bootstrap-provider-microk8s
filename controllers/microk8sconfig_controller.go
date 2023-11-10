@@ -288,30 +288,31 @@ func (r *MicroK8sConfigReconciler) handleClusterNotInitialized(ctx context.Conte
 		portOfDqlite = remappedDqlitePort
 	}
 
-	controlPlaneInput := &cloudinit.ControlPlaneInput{
-		BaseUserData:         cloudinit.BaseUserData{},
+	controlPlaneInput := &cloudinit.ControlPlaneInitInput{
 		CACert:               *cert,
 		CAKey:                *key,
 		ControlPlaneEndpoint: scope.Cluster.Spec.ControlPlaneEndpoint.Host,
-		JoinToken:            token,
-		JoinTokenTTLInSecs:   microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs,
-		Version:              *machine.Spec.Version,
-		PortOfClusterAgent:   portOfClusterAgent,
-		PortOfDqlite:         portOfDqlite,
+		Token:                token,
+		TokenTTL:             microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs,
+		KubernetesVersion:    *machine.Spec.Version,
+		ClusterAgentPort:     portOfClusterAgent,
+		DqlitePort:           portOfDqlite,
+		Addons:               microk8sConfig.Spec.InitConfiguration.Addons,
+		IPinIP:               microk8sConfig.Spec.InitConfiguration.IPinIP,
+		ContainerdHTTPProxy:  microk8sConfig.Spec.InitConfiguration.HTTPProxy,
+		ContainerdHTTPSProxy: microk8sConfig.Spec.InitConfiguration.HTTPSProxy,
+		ContainerdNoProxy:    microk8sConfig.Spec.InitConfiguration.NoProxy,
+		SnapstoreProxyDomain: microk8sConfig.Spec.InitConfiguration.SnapstoreProxyDomain,
+		SnapstoreProxyId:     microk8sConfig.Spec.InitConfiguration.SnapstoreProxyId,
+		Confinement:          microk8sConfig.Spec.InitConfiguration.Confinement,
+		RiskLevel:            microk8sConfig.Spec.InitConfiguration.RiskLevel,
+		ExtraWriteFiles:      cloudinit.WriteFilesFromAPI(microk8sConfig.Spec.InitConfiguration.ExtraWriteFiles),
+		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
+		SnapstoreHTTPProxy:   microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPProxy,
+		SnapstoreHTTPSProxy:  microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPSProxy,
 	}
-	if microk8sConfig.Spec.InitConfiguration != nil {
-		if microk8sConfig.Spec.InitConfiguration.Addons != nil {
-			controlPlaneInput.Addons = microk8sConfig.Spec.InitConfiguration.Addons
-		}
-		controlPlaneInput.HTTPSProxy = microk8sConfig.Spec.InitConfiguration.HTTPSProxy
-		controlPlaneInput.HTTPProxy = microk8sConfig.Spec.InitConfiguration.HTTPProxy
-		controlPlaneInput.NoProxy = microk8sConfig.Spec.InitConfiguration.NoProxy
-		controlPlaneInput.IPinIP = microk8sConfig.Spec.InitConfiguration.IPinIP
-
-		if microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs == 0 {
-			// set by default to 10 years
-			controlPlaneInput.JoinTokenTTLInSecs = 315569260
-		}
+	if controlPlaneInput.TokenTTL == 0 {
+		controlPlaneInput.TokenTTL = 315569260
 	}
 
 	bootstrapInitData, err := cloudinit.NewInitControlPlane(controlPlaneInput)
@@ -321,7 +322,13 @@ func (r *MicroK8sConfigReconciler) handleClusterNotInitialized(ctx context.Conte
 		return ctrl.Result{}, err
 	}
 
-	if err := r.storeBootstrapData(ctx, scope, bootstrapInitData); err != nil {
+	b, err := cloudinit.GenerateCloudConfig(bootstrapInitData)
+	if err != nil {
+		scope.Error(err, "Failed to render user data for bootstrap control plane")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.storeBootstrapData(ctx, scope, b); err != nil {
 		scope.Error(err, "Failed to store bootstrap data")
 		return ctrl.Result{}, err
 	}
@@ -355,8 +362,8 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 	}()
 
 	scope.Info("Creating BootstrapData for the join control plane")
-	ipOfNodeToConnectTo, err := r.getControlPlaneNodeToJoin(ctx, scope)
-	if err != nil || ipOfNodeToConnectTo == "" {
+	ipsOfNodesToConnectTo, err := r.getControlPlaneNodesToJoin(ctx, scope)
+	if err != nil || ipsOfNodesToConnectTo[0] == "" {
 		scope.Info("Failed to discover a control plane IP, requeueing.")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
@@ -384,35 +391,42 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 	}
 
 	controlPlaneInput := &cloudinit.ControlPlaneJoinInput{
-		BaseUserData:         cloudinit.BaseUserData{},
 		ControlPlaneEndpoint: scope.Cluster.Spec.ControlPlaneEndpoint.Host,
-		JoinToken:            token,
-		JoinTokenTTLInSecs:   microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs,
-		PortOfNodeToJoin:     portOfNodeToConnectTo,
-		PortOfDqlite:         portOfDqlite,
-		IPOfNodeToJoin:       ipOfNodeToConnectTo,
-		Version:              *machine.Spec.Version,
+		Token:                token,
+		TokenTTL:             microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs,
+		JoinNodeIPs:          ipsOfNodesToConnectTo,
+		KubernetesVersion:    *machine.Spec.Version,
+		ClusterAgentPort:     portOfNodeToConnectTo,
+		DqlitePort:           portOfDqlite,
+		IPinIP:               microk8sConfig.Spec.InitConfiguration.IPinIP,
+		ContainerdHTTPProxy:  microk8sConfig.Spec.InitConfiguration.HTTPProxy,
+		ContainerdHTTPSProxy: microk8sConfig.Spec.InitConfiguration.HTTPSProxy,
+		ContainerdNoProxy:    microk8sConfig.Spec.InitConfiguration.NoProxy,
+		SnapstoreProxyDomain: microk8sConfig.Spec.InitConfiguration.SnapstoreProxyDomain,
+		SnapstoreProxyId:     microk8sConfig.Spec.InitConfiguration.SnapstoreProxyId,
+		RiskLevel:            microk8sConfig.Spec.InitConfiguration.RiskLevel,
+		Confinement:          microk8sConfig.Spec.InitConfiguration.Confinement,
+		ExtraWriteFiles:      cloudinit.WriteFilesFromAPI(microk8sConfig.Spec.InitConfiguration.ExtraWriteFiles),
+		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
+		SnapstoreHTTPProxy:   microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPProxy,
+		SnapstoreHTTPSProxy:  microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPSProxy,
 	}
-	if microk8sConfig.Spec.InitConfiguration != nil {
-		controlPlaneInput.HTTPSProxy = microk8sConfig.Spec.InitConfiguration.HTTPSProxy
-		controlPlaneInput.HTTPProxy = microk8sConfig.Spec.InitConfiguration.HTTPProxy
-		controlPlaneInput.NoProxy = microk8sConfig.Spec.InitConfiguration.NoProxy
-		controlPlaneInput.IPinIP = microk8sConfig.Spec.InitConfiguration.IPinIP
-
-		if microk8sConfig.Spec.InitConfiguration.JoinTokenTTLInSecs == 0 {
-			// set by default to 10 years
-			controlPlaneInput.JoinTokenTTLInSecs = 315569260
-		}
+	if controlPlaneInput.TokenTTL == 0 {
+		controlPlaneInput.TokenTTL = 315569260
 	}
-
 	bootstrapInitData, err := cloudinit.NewJoinControlPlane(controlPlaneInput)
-
 	if err != nil {
-		scope.Error(err, "Failed to generate user data for bootstrap control plane")
+		scope.Error(err, "Failed to generate user data for joining control plane")
 		return ctrl.Result{}, err
 	}
 
-	if err := r.storeBootstrapData(ctx, scope, bootstrapInitData); err != nil {
+	b, err := cloudinit.GenerateCloudConfig(bootstrapInitData)
+	if err != nil {
+		scope.Error(err, "Failed to render user data for joining control plane")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.storeBootstrapData(ctx, scope, b); err != nil {
 		scope.Error(err, "Failed to store bootstrap data")
 		return ctrl.Result{}, err
 	}
@@ -461,8 +475,8 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 		portOfNodeToConnectTo = remappedClusterAgentPort
 	}
 
-	ipOfNodeToConnectTo, err := r.getControlPlaneNodeToJoin(ctx, scope)
-	if err != nil || ipOfNodeToConnectTo == "" {
+	ipOfNodesToConnectTo, err := r.getControlPlaneNodesToJoin(ctx, scope)
+	if err != nil || ipOfNodesToConnectTo[0] == "" {
 		scope.Info("Failed to discover a control plane IP, requeueing.")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
@@ -473,29 +487,42 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
-	workerInput := &cloudinit.WorkerJoinInput{
-		BaseUserData:         cloudinit.BaseUserData{},
-		JoinToken:            token,
+	workerInput := &cloudinit.WorkerInput{
 		ControlPlaneEndpoint: scope.Cluster.Spec.ControlPlaneEndpoint.Host,
-		PortOfNodeToJoin:     portOfNodeToConnectTo,
-		IPOfNodeToJoin:       ipOfNodeToConnectTo,
-		Version:              *machine.Spec.Version,
+		Token:                token,
+		KubernetesVersion:    *machine.Spec.Version,
+		ClusterAgentPort:     portOfNodeToConnectTo,
+		JoinNodeIPs:          ipOfNodesToConnectTo,
 	}
 
-	if microk8sConfig.Spec.InitConfiguration != nil {
-		workerInput.HTTPSProxy = microk8sConfig.Spec.InitConfiguration.HTTPSProxy
-		workerInput.HTTPProxy = microk8sConfig.Spec.InitConfiguration.HTTPProxy
-		workerInput.NoProxy = microk8sConfig.Spec.InitConfiguration.NoProxy
-	}
+	if c := microk8sConfig.Spec.InitConfiguration; c != nil {
+		workerInput.ContainerdHTTPSProxy = c.HTTPSProxy
+		workerInput.ContainerdHTTPProxy = c.HTTPProxy
+		workerInput.ContainerdNoProxy = c.NoProxy
+		workerInput.SnapstoreProxyDomain = c.SnapstoreProxyDomain
+		workerInput.SnapstoreProxyId = c.SnapstoreProxyId
+		workerInput.SnapstoreHTTPProxy = c.SnapstoreHTTPProxy
+		workerInput.SnapstoreHTTPSProxy = c.SnapstoreHTTPSProxy
 
+		workerInput.Confinement = c.Confinement
+		workerInput.RiskLevel = c.RiskLevel
+
+		workerInput.ExtraKubeletArgs = c.ExtraKubeletArgs
+		workerInput.ExtraWriteFiles = cloudinit.WriteFilesFromAPI(c.ExtraWriteFiles)
+	}
 	bootstrapInitData, err := cloudinit.NewJoinWorker(workerInput)
-
 	if err != nil {
-		scope.Error(err, "Failed to generate user data for bootstrap control plane")
+		scope.Error(err, "Failed to generate user data for joining worker node")
 		return ctrl.Result{}, err
 	}
 
-	if err := r.storeBootstrapData(ctx, scope, bootstrapInitData); err != nil {
+	b, err := cloudinit.GenerateCloudConfig(bootstrapInitData)
+	if err != nil {
+		scope.Error(err, "Failed to render user data for joining worker node")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.storeBootstrapData(ctx, scope, b); err != nil {
 		scope.Error(err, "Failed to store bootstrap data")
 		return ctrl.Result{}, err
 	}
@@ -503,27 +530,34 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 	return ctrl.Result{}, nil
 }
 
-func (r *MicroK8sConfigReconciler) getControlPlaneNodeToJoin(ctx context.Context, scope *Scope) (string, error) {
+func (r *MicroK8sConfigReconciler) getControlPlaneNodesToJoin(ctx context.Context, scope *Scope) ([2]string, error) {
+	var ipOfNodesToConnectTo [2]string
 	nodes, err := r.getControlPlaneMachinesForCluster(ctx, util.ObjectKey(scope.Cluster))
 	if err != nil {
 		scope.Error(err, "Lookup control plane nodes")
-		return "", err
+		return ipOfNodesToConnectTo, err
 	}
-	ipOfNodeToConnectTo := ""
+
+	n := 0
 	for _, node := range nodes {
-		if ipOfNodeToConnectTo != "" {
+		if n >= 2 {
 			break
 		}
 		if node.Spec.ProviderID != nil && node.Status.Phase == "Running" {
 			for _, address := range node.Status.Addresses {
 				if address.Address != "" {
-					ipOfNodeToConnectTo = address.Address
+					ipOfNodesToConnectTo[n] = address.Address
+					n += 1
+					if n == 1 {
+						ipOfNodesToConnectTo[n] = address.Address
+					}
 					break
 				}
 			}
 		}
 	}
-	return ipOfNodeToConnectTo, nil
+
+	return ipOfNodesToConnectTo, nil
 }
 
 func (r *MicroK8sConfigReconciler) storeBootstrapData(ctx context.Context, scope *Scope, data []byte) error {

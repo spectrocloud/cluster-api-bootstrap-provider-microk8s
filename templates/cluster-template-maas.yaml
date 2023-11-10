@@ -1,4 +1,4 @@
-# Based on https://github.com/kubernetes-sigs/cluster-api-provider-aws/releases/download/v1.5.0/cluster-template.yaml
+# Based on https://github.com/spectrocloud/cluster-api-provider-maas/blob/v4.0.2-spectro/templates/cluster-template.yaml
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
@@ -7,7 +7,7 @@ metadata:
 spec:
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-    kind: AWSCluster
+    kind: MaasCluster
     name: ${CLUSTER_NAME}
   controlPlaneRef:
     kind: MicroK8sControlPlane
@@ -15,14 +15,11 @@ spec:
     name: ${CLUSTER_NAME}-control-plane
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSCluster
+kind: MaasCluster
 metadata:
   name: ${CLUSTER_NAME}
 spec:
-  region: ${AWS_REGION}
-  sshKeyName: ${AWS_SSH_KEY_NAME}
-  bastion:
-    enabled: ${AWS_CREATE_BASTION:=false}
+  dnsDomain: ${MAAS_DNS_DOMAIN}
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: MicroK8sControlPlane
@@ -31,35 +28,32 @@ metadata:
 spec:
   controlPlaneConfig:
     initConfiguration:
-      joinTokenTTLInSecs: 900000
+      joinTokenTTLInSecs: 9000
       IPinIP: true
       addons:
         - dns
         - ingress
-      riskLevel: "${SNAP_RISKLEVEL:=}"
-      confinement: "${SNAP_CONFINEMENT:=}"
     clusterConfiguration:
       portCompatibilityRemap: true
   machineTemplate:
     infrastructureTemplate:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-      kind: AWSMachineTemplate
+      kind: MaasMachineTemplate
       name: "${CLUSTER_NAME}-control-plane"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
   version: "v${KUBERNETES_VERSION}"
-  upgradeStrategy: "${UPGRADE_STRATEGY}"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSMachineTemplate
+kind: MaasMachineTemplate
 metadata:
-  name: ${CLUSTER_NAME}-control-plane
+  name: "${CLUSTER_NAME}-control-plane"
 spec:
   template:
     spec:
-      iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: ${AWS_CONTROL_PLANE_INSTANCE_TYPE:=t3.large}
-      publicIP: ${AWS_PUBLIC_IP:=false}
-      sshKeyName: ${AWS_SSH_KEY_NAME}
+      minCPU: ${CONTROL_PLANE_MACHINE_MINCPU}
+      minMemory: ${CONTROL_PLANE_MACHINE_MINMEMORY}
+      image: ${CONTROL_PLANE_MACHINE_IMAGE}
+      resourcePool: ${CONTROL_PLANE_MACHINE_RESOURCEPOOL:= }
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -80,21 +74,21 @@ spec:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: MicroK8sConfigTemplate
       infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: MaasMachineTemplate
         name: "${CLUSTER_NAME}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta
-        kind: AWSMachineTemplate
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSMachineTemplate
+kind: MaasMachineTemplate
 metadata:
-  name: ${CLUSTER_NAME}-md-0
+  name: "${CLUSTER_NAME}-md-0"
 spec:
   template:
     spec:
-      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: ${AWS_NODE_INSTANCE_TYPE:=t3.large}
-      publicIP: ${AWS_PUBLIC_IP:=false}
-      sshKeyName: ${AWS_SSH_KEY_NAME}
+      minCPU: ${WORKER_MACHINE_MINCPU}
+      minMemory: ${WORKER_MACHINE_MINMEMORY}
+      image: ${WORKER_MACHINE_IMAGE}
+      resourcePool: ${WORKER_MACHINE_RESOURCEPOOL:= }
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: MicroK8sConfigTemplate
@@ -102,9 +96,4 @@ metadata:
   name: "${CLUSTER_NAME}-md-0"
 spec:
   template:
-    spec:
-      clusterConfiguration:
-        portCompatibilityRemap: true
-      initConfiguration:
-        riskLevel: "${SNAP_RISKLEVEL:=}"
-        confinement: "${SNAP_CONFINEMENT:=}"
+    spec: {}

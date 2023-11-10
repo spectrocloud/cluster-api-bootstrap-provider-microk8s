@@ -5,9 +5,11 @@ kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
 spec:
+  clusterNetwork:
+    apiServerPort: 6443
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-    kind: AWSCluster
+    kind: GCPCluster
     name: ${CLUSTER_NAME}
   controlPlaneRef:
     kind: MicroK8sControlPlane
@@ -15,14 +17,14 @@ spec:
     name: ${CLUSTER_NAME}-control-plane
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSCluster
+kind: GCPCluster
 metadata:
   name: ${CLUSTER_NAME}
 spec:
-  region: ${AWS_REGION}
-  sshKeyName: ${AWS_SSH_KEY_NAME}
-  bastion:
-    enabled: ${AWS_CREATE_BASTION:=false}
+  project: "${GCP_PROJECT}"
+  region: "${GCP_REGION}"
+  network:
+    name: "${GCP_NETWORK_NAME}"
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: MicroK8sControlPlane
@@ -43,23 +45,22 @@ spec:
   machineTemplate:
     infrastructureTemplate:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-      kind: AWSMachineTemplate
+      kind: GCPMachineTemplate
       name: "${CLUSTER_NAME}-control-plane"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
   version: "v${KUBERNETES_VERSION}"
   upgradeStrategy: "${UPGRADE_STRATEGY}"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSMachineTemplate
+kind: GCPMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-control-plane
 spec:
   template:
     spec:
-      iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: ${AWS_CONTROL_PLANE_INSTANCE_TYPE:=t3.large}
-      publicIP: ${AWS_PUBLIC_IP:=false}
-      sshKeyName: ${AWS_SSH_KEY_NAME}
+      instanceType: "${GCP_CONTROL_PLANE_MACHINE_TYPE}"
+      image: "${IMAGE_ID}"
+      publicIP: ${GCP_PUBLIC_IP}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -81,20 +82,19 @@ spec:
           kind: MicroK8sConfigTemplate
       infrastructureRef:
         name: "${CLUSTER_NAME}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta
-        kind: AWSMachineTemplate
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: GCPMachineTemplate
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: AWSMachineTemplate
+kind: GCPMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-md-0
 spec:
   template:
     spec:
-      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
-      instanceType: ${AWS_NODE_INSTANCE_TYPE:=t3.large}
-      publicIP: ${AWS_PUBLIC_IP:=false}
-      sshKeyName: ${AWS_SSH_KEY_NAME}
+      instanceType: "${GCP_NODE_MACHINE_TYPE}"
+      image: "${IMAGE_ID}"
+      publicIP: ${GCP_PUBLIC_IP}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: MicroK8sConfigTemplate
