@@ -66,6 +66,10 @@ type InitConfiguration struct {
 	// +optional
 	Addons []string `json:"addons,omitempty"`
 
+	// UpgradeType for k8s control plane: InPlaceUpgrade, RollingUpgrade, SmartUpgrade
+	// +optional
+	UpgradeType string `json:"UpgradeType,omitempty"`
+
 	// The optional IPinIP configuration
 	// +optional
 	IPinIP bool `json:"IPinIP,omitempty"`
