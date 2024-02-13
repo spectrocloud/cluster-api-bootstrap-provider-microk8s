@@ -69,6 +69,7 @@ func NewBaseCloudConfig() *CloudConfig {
 		})
 	}
 	return &CloudConfig{
-		WriteFiles: writeFiles,
+		WriteFiles:  writeFiles,
+		RunCommands: []string{"set -x"},
 	}
 }
