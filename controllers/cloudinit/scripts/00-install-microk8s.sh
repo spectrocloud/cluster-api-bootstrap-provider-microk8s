@@ -6,7 +6,7 @@
 # Assumptions:
 #   - snapd is installed
 
-if snap list microk8s; do
+if snap list microk8s; then
   echo "MicroK8s is already installed, will not install"
   exit 0
 fi
