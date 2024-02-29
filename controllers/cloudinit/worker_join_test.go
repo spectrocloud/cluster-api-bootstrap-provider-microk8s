@@ -28,13 +28,12 @@ func TestWorkerJoin(t *testing.T) {
 	t.Run("Simple", func(t *testing.T) {
 		g := NewWithT(t)
 
-		joins := [2]string{"10.0.3.194", "10.0.3.195"}
 		cloudConfig, err := cloudinit.NewJoinWorker(&cloudinit.WorkerInput{
 			ControlPlaneEndpoint: "capi-aws-apiserver-1647391446.us-east-1.elb.amazonaws.com",
 			KubernetesVersion:    "v1.24.3",
 			ClusterAgentPort:     "30000",
 			Token:                strings.Repeat("a", 32),
-			JoinNodeIPs:          joins,
+			JoinNodeIPs:          []string{"10.0.3.194", "10.0.3.195"},
 		})
 		g.Expect(err).NotTo(HaveOccurred())
 

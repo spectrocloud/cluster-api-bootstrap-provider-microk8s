@@ -91,6 +91,14 @@ const (
 	remappedClusterAgentPort string = "30000"
 )
 
+var (
+	// preferMachineAddressTypeList is the order of preference of machine addresses to use for joining microk8s nodes to a cluster.
+	preferMachineAddressTypeList = []clusterv1.MachineAddressType{
+		clusterv1.MachineInternalIP,
+		clusterv1.MachineExternalIP,
+	}
+)
+
 //+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=microk8sconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=microk8sconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=bootstrap.cluster.x-k8s.io,resources=microk8sconfigs/finalizers,verbs=update
@@ -482,7 +490,7 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 	}
 
 	ipOfNodesToConnectTo, err := r.getControlPlaneNodesToJoin(ctx, scope)
-	if err != nil || ipOfNodesToConnectTo[0] == "" {
+	if err != nil || len(ipOfNodesToConnectTo) == 0 {
 		scope.Info("Failed to discover a control plane IP, requeueing.")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
@@ -539,34 +547,37 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 	return ctrl.Result{}, nil
 }
 
-func (r *MicroK8sConfigReconciler) getControlPlaneNodesToJoin(ctx context.Context, scope *Scope) ([2]string, error) {
-	var ipOfNodesToConnectTo [2]string
+func (r *MicroK8sConfigReconciler) getControlPlaneNodesToJoin(ctx context.Context, scope *Scope) ([]string, error) {
 	nodes, err := r.getControlPlaneMachinesForCluster(ctx, util.ObjectKey(scope.Cluster))
 	if err != nil {
 		scope.Error(err, "Lookup control plane nodes")
-		return ipOfNodesToConnectTo, err
+		return nil, err
 	}
 
-	n := 0
+	addressesByType := make(map[clusterv1.MachineAddressType][]string)
 	for _, node := range nodes {
-		if n >= 2 {
-			break
+		if node.Spec.ProviderID == nil || node.Status.Phase != "Running" {
+			continue
 		}
-		if node.Spec.ProviderID != nil && node.Status.Phase == "Running" {
-			for _, address := range node.Status.Addresses {
-				if address.Address != "" {
-					ipOfNodesToConnectTo[n] = address.Address
-					n += 1
-					if n == 1 {
-						ipOfNodesToConnectTo[n] = address.Address
-					}
-					break
-				}
+		for _, address := range node.Status.Addresses {
+			if address.Address == "" {
+				continue
 			}
+			addressesByType[address.Type] = append(addressesByType[address.Type], address.Address)
 		}
 	}
 
-	return ipOfNodesToConnectTo, nil
+	for _, addressType := range preferMachineAddressTypeList {
+		if addresses, ok := addressesByType[addressType]; ok && len(addresses) > 0 {
+			return addresses, nil
+		}
+	}
+
+	// if we are here, no addresses were found
+	err = fmt.Errorf("machines do not have any addresses with types %v", preferMachineAddressTypeList)
+	scope.Error(err, "Lookup control plane node IPs", "addressesByType", addressesByType)
+
+	return nil, err
 }
 
 func (r *MicroK8sConfigReconciler) storeBootstrapData(ctx context.Context, scope *Scope, data []byte) error {
