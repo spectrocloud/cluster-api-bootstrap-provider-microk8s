@@ -104,6 +104,20 @@ type InitConfiguration struct {
 	// ExtraKubeletArgs is a list of extra arguments to add to the kubelet.
 	// +optional
 	ExtraKubeletArgs []string `json:"extraKubeletArgs,omitempty"`
+
+	// BootCommands is a list of commands to run during boot.
+	// These will be injected into the `bootcmd` section of cloud-init.
+	BootCommands []string `json:"bootCommands,omitempty"`
+
+	// PreRunCommands is a list of commands to run before installing MicroK8s.
+	// These will be injected into the `runcmd` section of cloud-init.
+	// +optional
+	PreRunCommands []string `json:"preRunCommands,omitempty"`
+
+	// PostRunCommands is a list of commands to run after installing MicroK8s.
+	// These will be injected into the `runcmd` section of cloud-init.
+	// +optional
+	PostRunCommands []string `json:"postRunCommands,omitempty"`
 }
 
 // CloudInitWriteFile is a file that will be injected by cloud-init

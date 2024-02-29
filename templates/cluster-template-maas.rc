@@ -19,3 +19,7 @@ export WORKER_MACHINE_IMAGE="u-2204-k-1261-0"
 # (optional) Configure resource pools for control plane and worker machines
 # export CONTROL_PLANE_MACHINE_RESOURCEPOOL="kvm-pool"
 # export WORKER_MACHINE_RESOURCEPOOL="bare-metal-pool"
+
+# (optional) Configure (comma-separated) tags for control plane and worker machines
+# export CONTROL_PLANE_MACHINE_TAGS="control-plane,controller"
+# export WORKER_MACHINE_TAGS="worker,compute"

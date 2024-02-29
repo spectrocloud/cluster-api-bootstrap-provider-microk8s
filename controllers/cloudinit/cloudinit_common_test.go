@@ -326,4 +326,60 @@ func TestCloudConfigInput(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("CustomCommands", func(t *testing.T) {
+		for _, tc := range []struct {
+			name            string
+			makeCloudConfig func() (*cloudinit.CloudConfig, error)
+		}{
+			{
+				name: "ControlPlaneInit",
+				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+					return cloudinit.NewInitControlPlane(&cloudinit.ControlPlaneInitInput{
+						BootCommands:      []string{"cmd1"},
+						PreRunCommands:    []string{"cmd2"},
+						PostRunCommands:   []string{"cmd3"},
+						KubernetesVersion: "v1.25.0",
+						Token:             strings.Repeat("a", 32),
+						TokenTTL:          100,
+					})
+				},
+			},
+			{
+				name: "ControlPlaneJoin",
+				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+					return cloudinit.NewJoinControlPlane(&cloudinit.ControlPlaneJoinInput{
+						BootCommands:      []string{"cmd1"},
+						PreRunCommands:    []string{"cmd2"},
+						PostRunCommands:   []string{"cmd3"},
+						KubernetesVersion: "v1.25.0",
+						Token:             strings.Repeat("a", 32),
+						TokenTTL:          100,
+					})
+				},
+			},
+			{
+				name: "Worker",
+				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+					return cloudinit.NewJoinWorker(&cloudinit.WorkerInput{
+						BootCommands:      []string{"cmd1"},
+						PreRunCommands:    []string{"cmd2"},
+						PostRunCommands:   []string{"cmd3"},
+						KubernetesVersion: "v1.25.0",
+						Token:             strings.Repeat("a", 32),
+					})
+				},
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				g := NewWithT(t)
+				c, err := tc.makeCloudConfig()
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(c.BootCommands).To(ConsistOf(`cmd1`))
+				g.Expect(c.RunCommands).To(ContainElement(`cmd2`))
+				g.Expect(c.RunCommands[len(c.RunCommands)-1]).To(Equal(`cmd3`))
+			})
+		}
+	})
 }

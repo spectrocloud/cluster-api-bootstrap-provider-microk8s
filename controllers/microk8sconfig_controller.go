@@ -310,6 +310,9 @@ func (r *MicroK8sConfigReconciler) handleClusterNotInitialized(ctx context.Conte
 		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
 		SnapstoreHTTPProxy:   microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPProxy,
 		SnapstoreHTTPSProxy:  microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPSProxy,
+		BootCommands:         microk8sConfig.Spec.InitConfiguration.BootCommands,
+		PreRunCommands:       microk8sConfig.Spec.InitConfiguration.PreRunCommands,
+		PostRunCommands:      microk8sConfig.Spec.InitConfiguration.PostRunCommands,
 	}
 	if controlPlaneInput.TokenTTL == 0 {
 		controlPlaneInput.TokenTTL = 315569260
@@ -410,6 +413,9 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 		ExtraKubeletArgs:     microk8sConfig.Spec.InitConfiguration.ExtraKubeletArgs,
 		SnapstoreHTTPProxy:   microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPProxy,
 		SnapstoreHTTPSProxy:  microk8sConfig.Spec.InitConfiguration.SnapstoreHTTPSProxy,
+		BootCommands:         microk8sConfig.Spec.InitConfiguration.BootCommands,
+		PreRunCommands:       microk8sConfig.Spec.InitConfiguration.PreRunCommands,
+		PostRunCommands:      microk8sConfig.Spec.InitConfiguration.PostRunCommands,
 	}
 	if controlPlaneInput.TokenTTL == 0 {
 		controlPlaneInput.TokenTTL = 315569260
@@ -509,6 +515,9 @@ func (r *MicroK8sConfigReconciler) handleJoiningWorkerNode(ctx context.Context, 
 
 		workerInput.ExtraKubeletArgs = c.ExtraKubeletArgs
 		workerInput.ExtraWriteFiles = cloudinit.WriteFilesFromAPI(c.ExtraWriteFiles)
+		workerInput.BootCommands = c.BootCommands
+		workerInput.PreRunCommands = c.PreRunCommands
+		workerInput.PostRunCommands = c.PostRunCommands
 	}
 	bootstrapInitData, err := cloudinit.NewJoinWorker(workerInput)
 	if err != nil {

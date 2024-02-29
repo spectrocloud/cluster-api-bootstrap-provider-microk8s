@@ -69,6 +69,12 @@ type ControlPlaneInitInput struct {
 	SnapstoreHTTPProxy string
 	// SnapstoreHTTPSProxy is https_proxy configuration for snap store.
 	SnapstoreHTTPSProxy string
+	// BootCommands is a list of commands to add to the "bootcmd" section of cloud-init.
+	BootCommands []string
+	// PreRunCommands is a list of commands to add to the "runcmd" section of cloud-init before installing MicroK8s.
+	PreRunCommands []string
+	// PostRunCommands is a list of commands to add to the "runcmd" section of cloud-init after installing MicroK8s.
+	PostRunCommands []string
 }
 
 func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
@@ -128,8 +134,10 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 			Owner:       "root:root",
 		})
 	}
+	cloudConfig.BootCommands = append(cloudConfig.BootCommands, input.BootCommands...)
+
+	cloudConfig.RunCommands = append(cloudConfig.RunCommands, input.PreRunCommands...)
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
-		"set -x",
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreHTTPProxyScript), input.SnapstoreHTTPProxy, input.SnapstoreHTTPSProxy),
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreProxyScript), input.SnapstoreProxyDomain, input.SnapstoreProxyId),
 		scriptPath(disableHostServicesScript),
@@ -146,6 +154,7 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %s", scriptPath(microk8sEnableScript), strings.Join(addons, " ")),
 		fmt.Sprintf("microk8s add-node --token-ttl %v --token %q", input.TokenTTL, input.Token),
 	)
+	cloudConfig.RunCommands = append(cloudConfig.RunCommands, input.PostRunCommands...)
 
 	return cloudConfig, nil
 }
