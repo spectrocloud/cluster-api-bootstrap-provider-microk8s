@@ -374,7 +374,7 @@ func (r *MicroK8sConfigReconciler) handleJoiningControlPlaneNode(ctx context.Con
 
 	scope.Info("Creating BootstrapData for the join control plane")
 	ipsOfNodesToConnectTo, err := r.getControlPlaneNodesToJoin(ctx, scope)
-	if err != nil || ipsOfNodesToConnectTo[0] == "" {
+	if err != nil || len(ipsOfNodesToConnectTo) == 0 {
 		scope.Info("Failed to discover a control plane IP, requeueing.")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
