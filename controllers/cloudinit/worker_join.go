@@ -41,7 +41,7 @@ type WorkerInput struct {
 	// ContainerdNoProxy is no_proxy configuration for containerd.
 	ContainerdNoProxy string
 	// JoinNodeIPs is the IP addresses of the nodes to join.
-	JoinNodeIPs [2]string
+	JoinNodeIPs []string
 	// Confinement specifies a classic or strict deployment of microk8s snap.
 	Confinement string
 	// RiskLevel specifies the risk level (strict, candidate, beta, edge) for the snap channels.
@@ -100,8 +100,10 @@ func NewJoinWorker(input *WorkerInput) (*CloudConfig, error) {
 		})
 	}
 
-	joinStr := fmt.Sprintf("%s:%s/%s", input.JoinNodeIPs[0], input.ClusterAgentPort, input.Token)
-	joinStrAlt := fmt.Sprintf("%s:%s/%s", input.JoinNodeIPs[1], input.ClusterAgentPort, input.Token)
+	joinURLs := make([]string, 0, len(input.JoinNodeIPs))
+	for _, nodeIP := range input.JoinNodeIPs {
+		joinURLs = append(joinURLs, fmt.Sprintf("%q", fmt.Sprintf("%s:%s/%s", nodeIP, input.ClusterAgentPort, input.Token)))
+	}
 
 	cloudConfig.BootCommands = append(cloudConfig.BootCommands, input.BootCommands...)
 
@@ -115,7 +117,7 @@ func NewJoinWorker(input *WorkerInput) (*CloudConfig, error) {
 		scriptPath(configureKubeletScript),
 		"microk8s status --wait-ready",
 		fmt.Sprintf("%s %q", scriptPath(configureClusterAgentPortScript), input.ClusterAgentPort),
-		fmt.Sprintf("%s yes %q %q", scriptPath(microk8sJoinScript), joinStr, joinStrAlt),
+		fmt.Sprintf("%s yes %s", scriptPath(microk8sJoinScript), strings.Join(joinURLs, " ")),
 		fmt.Sprintf("%s %s 6443 %s", scriptPath(configureTraefikScript), input.ControlPlaneEndpoint, stopApiServerProxyRefreshes),
 	)
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands, input.PostRunCommands...)
