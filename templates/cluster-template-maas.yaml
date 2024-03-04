@@ -54,7 +54,7 @@ spec:
       minMemory: ${CONTROL_PLANE_MACHINE_MINMEMORY}
       image: ${CONTROL_PLANE_MACHINE_IMAGE}
       resourcePool: ${CONTROL_PLANE_MACHINE_RESOURCEPOOL:= }
-      tags: [ ${CONTROL_PLANE_MACHINE_TAGS} ]
+      tags: [ ${CONTROL_PLANE_MACHINE_TAGS:= } ]
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -90,7 +90,7 @@ spec:
       minMemory: ${WORKER_MACHINE_MINMEMORY}
       image: ${WORKER_MACHINE_IMAGE}
       resourcePool: ${WORKER_MACHINE_RESOURCEPOOL:= }
-      tags: [ ${WORKER_MACHINE_TAGS} ]
+      tags: [ ${WORKER_MACHINE_TAGS:= } ]
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: MicroK8sConfigTemplate

@@ -10,7 +10,7 @@ export AZURE_CLIENT_SECRET="<Password>"
 export AZURE_LOCATION=eastus # this should be an Azure region that your subscription has quota for.
 export AZURE_SUBSCRIPTION_ID="<SubscriptionId>"
 
-# Azure virtual machine types 
+# Azure virtual machine types
 export AZURE_CONTROL_PLANE_MACHINE_TYPE=Standard_D2a_v4
 export AZURE_NODE_MACHINE_TYPE=Standard_D2a_v4
 
@@ -27,9 +27,8 @@ export CLUSTER_IDENTITY_NAME="cluster-identity"
 export AZURE_CLUSTER_IDENTITY_SECRET_NAMESPACE="default"
 
 # (optional) Snap risk level and confinement
-export SNAP_RISKLEVEL=""
-export SNAP_CONFINEMENT=""
-
+export SNAP_RISKLEVEL="stable"
+export SNAP_CONFINEMENT="classic"
 
 # Upgrade configuration
 export UPGRADE_STRATEGY=SmartUpgrade

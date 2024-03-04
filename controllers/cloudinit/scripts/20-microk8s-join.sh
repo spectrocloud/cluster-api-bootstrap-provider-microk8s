@@ -1,27 +1,33 @@
 #!/bin/bash -xe
 
 # Usage:
-#   $0 $worker_yes_no $join_string $alternative_join_string
+#   $0 $worker_yes_no $join_string_1 $join_string_2 ... $join_string_N
 #
 # Assumptions:
 #   - microk8s is installed
 #   - microk8s node is ready to join the cluster
 
-join="${2}"
-join_alt="${3}"
-
+join_args=""
 if [ ${1} == "yes" ]; then
-  join+=" --worker"
-  join_alt+=" --worker"
+  join_args="--worker"
 fi
 
-while ! microk8s join ${join}; do
-  echo "Failed to join MicroK8s cluster, retring alternative join string"
-  if ! microk8s join ${join_alt} ; then
-    break
-  fi
-  echo "Failed to join MicroK8s cluster, will retry"
-  sleep 5
+shift
+
+# Loop over the given join addresses until microk8s join command succeeds.
+joined="false"
+while [ "$joined" = "false" ]; do
+
+  for url in "${@}"; do
+    if microk8s join "${url}" $join_args; then
+      joined="true"
+      break
+    fi
+
+    echo "Failed to join MicroK8s cluster, will retry"
+    sleep 5
+  done
+
 done
 
 # What is this hack? Why do we call snap set here?
