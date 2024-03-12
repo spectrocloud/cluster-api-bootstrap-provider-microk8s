@@ -75,6 +75,9 @@ const (
 
 	// configureTraefikScript configures the control plane endpoint in the traefik provider configuration.
 	configureTraefikScript script = "30-configure-traefik.sh"
+
+	// waitAPIServerScript waits for the kube-apiserver to be ready.
+	waitAPIServerScript script = "50-wait-apiserver.sh"
 )
 
 var allScripts = []script{
@@ -92,6 +95,7 @@ var allScripts = []script{
 	configureKubeletScript,
 	microk8sEnableScript,
 	microk8sJoinScript,
+	waitAPIServerScript,
 }
 
 func mustGetScript(scriptName script) string {
