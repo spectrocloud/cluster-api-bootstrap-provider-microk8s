@@ -22,4 +22,5 @@ sleep 10
 while ! snap restart microk8s.daemon-kubelite; do
   sleep 5
 done
-microk8s status --wait-ready
+
+/capi-scripts/50-wait-apiserver.sh

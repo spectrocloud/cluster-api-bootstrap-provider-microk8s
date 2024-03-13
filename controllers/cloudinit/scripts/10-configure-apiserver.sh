@@ -37,7 +37,7 @@ while ! snap restart microk8s.daemon-kubelite; do
 done
 
 # delete kubernetes service to make sure port is updated
-microk8s status --wait-ready
+/capi-scripts/50-wait-apiserver.sh
 microk8s kubectl delete svc kubernetes
 
 # redirect port 16443 to 6443

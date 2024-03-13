@@ -45,7 +45,7 @@ func TestWorkerJoin(t *testing.T) {
 			`/capi-scripts/00-install-microk8s.sh "--channel 1.24 --classic"`,
 			`/capi-scripts/10-configure-containerd-proxy.sh "" "" ""`,
 			`/capi-scripts/10-configure-kubelet.sh`,
-			`microk8s status --wait-ready`,
+			`/capi-scripts/50-wait-apiserver.sh`,
 			`/capi-scripts/10-configure-cluster-agent-port.sh "30000"`,
 			`/capi-scripts/20-microk8s-join.sh yes "10.0.3.194:30000/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "10.0.3.195:30000/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`,
 			`/capi-scripts/30-configure-traefik.sh capi-aws-apiserver-1647391446.us-east-1.elb.amazonaws.com 6443 no`,
