@@ -115,7 +115,7 @@ func NewJoinWorker(input *WorkerInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
 		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
 		scriptPath(configureKubeletScript),
-		"microk8s status --wait-ready",
+		scriptPath(waitAPIServerScript),
 		fmt.Sprintf("%s %q", scriptPath(configureClusterAgentPortScript), input.ClusterAgentPort),
 		fmt.Sprintf("%s yes %s", scriptPath(microk8sJoinScript), strings.Join(joinURLs, " ")),
 		fmt.Sprintf("%s %s 6443 %s", scriptPath(configureTraefikScript), input.ControlPlaneEndpoint, stopApiServerProxyRefreshes),

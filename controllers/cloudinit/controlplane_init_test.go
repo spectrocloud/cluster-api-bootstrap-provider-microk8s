@@ -50,7 +50,7 @@ func TestControlPlaneInit(t *testing.T) {
 			`/capi-scripts/00-install-microk8s.sh "--channel 1.25 --classic"`,
 			`/capi-scripts/10-configure-containerd-proxy.sh "" "" ""`,
 			`/capi-scripts/10-configure-kubelet.sh`,
-			`microk8s status --wait-ready`,
+			`/capi-scripts/50-wait-apiserver.sh`,
 			`microk8s refresh-certs /var/tmp`,
 			`/capi-scripts/10-configure-calico-ipip.sh true`,
 			`/capi-scripts/10-configure-cluster-agent-port.sh "30000"`,

@@ -144,7 +144,7 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
 		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
 		scriptPath(configureKubeletScript),
-		"microk8s status --wait-ready",
+		scriptPath(waitAPIServerScript),
 		"microk8s refresh-certs /var/tmp",
 		fmt.Sprintf("%s %v", scriptPath(configureCalicoIPIPScript), input.IPinIP),
 		fmt.Sprintf("%s %q", scriptPath(configureClusterAgentPortScript), input.ClusterAgentPort),

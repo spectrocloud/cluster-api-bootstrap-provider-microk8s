@@ -12,6 +12,6 @@ microk8s enable community || true
 
 while [[ "$@" != "" ]]; do
   microk8s enable "$1"
-  microk8s status --wait-ready
+  /capi-scripts/50-wait-apiserver.sh
   shift
 done
