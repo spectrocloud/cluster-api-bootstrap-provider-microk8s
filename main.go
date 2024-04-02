@@ -19,9 +19,7 @@ package main
 import (
 	"context"
 	"flag"
-	"math/rand"
 	"os"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -60,8 +58,6 @@ func init() {
 
 	utilruntime.Must(bootstrapclusterxk8siov1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
-
-	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
