@@ -15,6 +15,13 @@ fi
 
 CNI_YAML="/var/snap/microk8s/current/args/cni-network/cni.yaml"
 
+if [ ! -f "${CNI_YAML}" ]; then
+  echo "Will not configure Calico, missing cni.yaml"
+  exit 0
+fi
+
+/capi-scripts/50-wait-apiserver.sh
+
 # Stop calico-node and delete ippools to ensure no vxlan pools are left around
 microk8s kubectl delete daemonset/calico-node -n kube-system || true
 microk8s kubectl delete ippools --all || true

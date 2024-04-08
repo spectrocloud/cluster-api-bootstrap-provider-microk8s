@@ -55,8 +55,5 @@ done
 sleep 10
 
 if [ ${1} == "no" ]; then
-  while ! microk8s status --wait-ready; do
-    echo "Waiting for the cluster to come up"
-    sleep 5
-  done
+  /capi-scripts/50-wait-apiserver.sh
 fi
