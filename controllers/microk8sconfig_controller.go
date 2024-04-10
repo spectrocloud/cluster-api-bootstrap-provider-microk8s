@@ -702,6 +702,11 @@ func (r *MicroK8sConfigReconciler) getCA(ctx context.Context, scope *Scope) (cer
 				Name:      scope.Cluster.Name + "-ca",
 			},
 			Data: map[string][]byte{
+				// these are the expected names for the certificate and key
+				"tls.crt": []byte(*newcrt),
+				"tls.key": []byte(*newkey),
+
+				// these are here for backwards-compatibility with older versions of the providers
 				"crt": []byte(*newcrt),
 				"key": []byte(*newkey),
 			},
