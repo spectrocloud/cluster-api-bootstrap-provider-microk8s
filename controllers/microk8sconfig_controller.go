@@ -626,17 +626,19 @@ func (r *MicroK8sConfigReconciler) storeBootstrapData(ctx context.Context, scope
 
 func (r *MicroK8sConfigReconciler) getJoinToken(ctx context.Context, scope *Scope) (string, error) {
 	// See if the token exists. If not create it.
-	secrets := &corev1.SecretList{}
-	err := r.Client.List(ctx, secrets)
-	if err != nil {
-		return "", err
-	}
+	secret := &corev1.Secret{}
 
-	found := false
-	for _, s := range secrets.Items {
-		if s.Name == scope.Cluster.Name+"-jointoken" {
-			found = true
-		}
+	var found bool
+	err := r.Client.Get(ctx, types.NamespacedName{
+		Namespace: scope.Cluster.Namespace,
+		Name:      fmt.Sprintf("%s-jointoken", scope.Cluster.Name),
+	}, secret)
+	switch {
+	case err == nil:
+		found = true
+	case apierrors.IsNotFound(err):
+	default:
+		return "", err
 	}
 
 	if !found {
@@ -678,17 +680,19 @@ func (r *MicroK8sConfigReconciler) getJoinToken(ctx context.Context, scope *Scop
 
 func (r *MicroK8sConfigReconciler) getCA(ctx context.Context, scope *Scope) (cert *string, key *string, err error) {
 	// See if the CA cert exists. If not create it.
-	secrets := &corev1.SecretList{}
-	err = r.Client.List(ctx, secrets)
-	if err != nil {
-		return nil, nil, err
-	}
+	caSecret := &corev1.Secret{}
 
-	found := false
-	for _, s := range secrets.Items {
-		if s.Name == scope.Cluster.Name+"-ca" {
-			found = true
-		}
+	var found bool
+	err = r.Client.Get(ctx, types.NamespacedName{
+		Namespace: scope.Cluster.Namespace,
+		Name:      fmt.Sprintf("%s-ca", scope.Cluster.Name),
+	}, caSecret)
+	switch {
+	case err == nil:
+		found = true
+	case apierrors.IsNotFound(err):
+	default:
+		return nil, nil, err
 	}
 
 	if !found {
