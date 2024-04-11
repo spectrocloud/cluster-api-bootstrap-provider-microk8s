@@ -626,112 +626,83 @@ func (r *MicroK8sConfigReconciler) storeBootstrapData(ctx context.Context, scope
 
 func (r *MicroK8sConfigReconciler) getJoinToken(ctx context.Context, scope *Scope) (string, error) {
 	// See if the token exists. If not create it.
-	secrets := &corev1.SecretList{}
-	err := r.Client.List(ctx, secrets)
-	if err != nil {
+	secret := &corev1.Secret{}
+	err := r.Client.Get(ctx, types.NamespacedName{
+		Namespace: scope.Cluster.Namespace,
+		Name:      fmt.Sprintf("%s-jointoken", scope.Cluster.Name),
+	}, secret)
+	switch {
+	case err == nil:
+		return string(secret.Data["value"]), nil
+	case apierrors.IsNotFound(err):
+	default:
 		return "", err
 	}
 
-	found := false
-	for _, s := range secrets.Items {
-		if s.Name == scope.Cluster.Name+"-jointoken" {
-			found = true
-		}
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	b := make([]byte, 32)
+	for i := range b {
+		b[i] = letters[mrand.Intn(len(letters))]
 	}
-
-	if !found {
-		const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		b := make([]byte, 32)
-		for i := range b {
-			b[i] = letters[mrand.Intn(len(letters))]
-		}
-		token := string(b)
-		tokenSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: scope.Cluster.Namespace,
-				Name:      scope.Cluster.Name + "-jointoken",
-			},
-			Data: map[string][]byte{
-				"value": []byte(token),
-			},
-		}
-		err = r.Client.Create(ctx, tokenSecret)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	readTokenSecret := &corev1.Secret{}
-	err = r.Client.Get(ctx,
-		types.NamespacedName{
+	token := string(b)
+	tokenSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
 			Namespace: scope.Cluster.Namespace,
 			Name:      scope.Cluster.Name + "-jointoken",
 		},
-		readTokenSecret,
-	)
-	if err != nil {
+		Data: map[string][]byte{
+			"value": []byte(token),
+		},
+	}
+	if err := r.Client.Create(ctx, tokenSecret); err != nil {
 		return "", err
 	}
 
-	return string(readTokenSecret.Data["value"]), nil
+	return token, nil
 }
 
 func (r *MicroK8sConfigReconciler) getCA(ctx context.Context, scope *Scope) (cert *string, key *string, err error) {
 	// See if the CA cert exists. If not create it.
-	secrets := &corev1.SecretList{}
-	err = r.Client.List(ctx, secrets)
-	if err != nil {
+	secret := &corev1.Secret{}
+
+	err = r.Client.Get(ctx, types.NamespacedName{
+		Namespace: scope.Cluster.Namespace,
+		Name:      fmt.Sprintf("%s-ca", scope.Cluster.Name),
+	}, secret)
+	switch {
+	case err == nil:
+		cert := string(secret.Data["crt"])
+		key := string(secret.Data["key"])
+		return &cert, &key, nil
+	case apierrors.IsNotFound(err):
+	default:
 		return nil, nil, err
 	}
 
-	found := false
-	for _, s := range secrets.Items {
-		if s.Name == scope.Cluster.Name+"-ca" {
-			found = true
-		}
+	newcrt, newkey, err := r.generateCA()
+	if err != nil {
+		return nil, nil, err
 	}
-
-	if !found {
-		newcrt, newkey, err := r.generateCA()
-		if err != nil {
-			return nil, nil, err
-		}
-		caSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: scope.Cluster.Namespace,
-				Name:      scope.Cluster.Name + "-ca",
-			},
-			Data: map[string][]byte{
-				// these are the expected names for the certificate and key
-				"tls.crt": []byte(*newcrt),
-				"tls.key": []byte(*newkey),
-
-				// these are here for backwards-compatibility with older versions of the providers
-				"crt": []byte(*newcrt),
-				"key": []byte(*newkey),
-			},
-		}
-		err = r.Client.Create(ctx, caSecret)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	readCASecret := &corev1.Secret{}
-	err = r.Client.Get(ctx,
-		types.NamespacedName{
+	caSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
 			Namespace: scope.Cluster.Namespace,
 			Name:      scope.Cluster.Name + "-ca",
 		},
-		readCASecret,
-	)
-	if err != nil {
+		Data: map[string][]byte{
+			// these are the expected names for the certificate and key
+			"tls.crt": []byte(*newcrt),
+			"tls.key": []byte(*newkey),
+
+			// these are here for backwards-compatibility with older versions of the providers
+			"crt": []byte(*newcrt),
+			"key": []byte(*newkey),
+		},
+	}
+	if err := r.Client.Create(ctx, caSecret); err != nil {
 		return nil, nil, err
 	}
 
-	certstr := string(readCASecret.Data["crt"])
-	keystr := string(readCASecret.Data["key"])
-	return &certstr, &keystr, nil
+	return newcrt, newkey, nil
 }
 
 func (r *MicroK8sConfigReconciler) generateCA() (cert *string, key *string, err error) {
