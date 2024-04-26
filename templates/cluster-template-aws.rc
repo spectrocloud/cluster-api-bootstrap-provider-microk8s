@@ -16,7 +16,7 @@ export AWS_CREATE_BASTION=true
 export AWS_PUBLIC_IP=false
 export AWS_CONTROL_PLANE_MACHINE_FLAVOR=t3.large
 export AWS_NODE_MACHINE_FLAVOR=t3.large
-export AWS_SSH_KEY_NAME=microk8s
+export AWS_SSH_KEY_NAME=my-ssh-key
 
 # (optional) Snap risk level and confinement
 export SNAP_RISKLEVEL="stable"
