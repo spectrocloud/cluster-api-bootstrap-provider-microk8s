@@ -20,7 +20,6 @@ metadata:
   name: ${CLUSTER_NAME}
 spec:
   region: ${AWS_REGION}
-  imageLookupBaseOS: ${AWS_IMAGE_LOOKUP_BASE_OS}
   sshKeyName: ${AWS_SSH_KEY_NAME}
   bastion:
     enabled: ${AWS_CREATE_BASTION:=false}
