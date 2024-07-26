@@ -88,6 +88,7 @@ var allScripts = []script{
 	snapstoreHTTPProxyScript,
 	disableHostServicesScript,
 	installMicroK8sScript,
+	disableDefaultCNIScript,
 	configureCertLB,
 	configureAPIServerScript,
 	configureCalicoIPIPScript,
