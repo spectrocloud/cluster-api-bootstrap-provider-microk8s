@@ -143,7 +143,8 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreHTTPProxyScript), input.SnapstoreHTTPProxy, input.SnapstoreHTTPSProxy),
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreProxyScript), input.SnapstoreProxyDomain, input.SnapstoreProxyId),
 		scriptPath(disableHostServicesScript),
-		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs))
+		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
+	)
 
 	if input.DisableDefaultCNI {
 		cloudConfig.RunCommands = append(cloudConfig.RunCommands, scriptPath(disableDefaultCNIScript))
