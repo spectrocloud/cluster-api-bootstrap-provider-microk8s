@@ -83,7 +83,7 @@ type InitConfiguration struct {
 
 	// Whether or not to use the default CNI
 	// +optional
-	DisableDefaultCNI bool `json:"useDefaultCNI,omitempty"`
+	DisableDefaultCNI bool `json:"disableDefaultCNI,omitempty"`
 
 	// The snap store proxy domain
 	// +optional
