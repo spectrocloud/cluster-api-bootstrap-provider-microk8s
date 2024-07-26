@@ -416,7 +416,7 @@ func TestCloudConfigInput(t *testing.T) {
 				c, err := tc.makeCloudConfig()
 				g.Expect(err).NotTo(HaveOccurred())
 
-				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/00-disable-default-cni.sh`))
+				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/10-disable-default-cni.sh`))
 			})
 		}
 	})
@@ -454,7 +454,7 @@ func TestCloudConfigInput(t *testing.T) {
 				c, err := tc.makeCloudConfig()
 				g.Expect(err).NotTo(HaveOccurred())
 
-				g.Expect(c.RunCommands).NotTo(ContainElement(`/capi-scripts/00-disable-default-cni.sh`))
+				g.Expect(c.RunCommands).NotTo(ContainElement(`/capi-scripts/10-disable-default-cni.sh`))
 			})
 		}
 	})

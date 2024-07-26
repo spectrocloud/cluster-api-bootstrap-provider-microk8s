@@ -144,6 +144,9 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreProxyScript), input.SnapstoreProxyDomain, input.SnapstoreProxyId),
 		scriptPath(disableHostServicesScript),
 		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
+		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
+		scriptPath(configureKubeletScript),
+		scriptPath(waitAPIServerScript),
 	)
 
 	if input.DisableDefaultCNI {
@@ -151,9 +154,6 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 	}
 
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
-		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
-		scriptPath(configureKubeletScript),
-		scriptPath(waitAPIServerScript),
 		"microk8s refresh-certs /var/tmp",
 		fmt.Sprintf("%s %v", scriptPath(configureCalicoIPIPScript), input.IPinIP),
 		fmt.Sprintf("%s %q", scriptPath(configureClusterAgentPortScript), input.ClusterAgentPort),

@@ -44,7 +44,7 @@ const (
 	disableHostServicesScript script = "00-disable-host-services.sh"
 
 	// disableDefaultCNIScript disables the default CNI plugin.
-	disableDefaultCNIScript script = "00-disable-default-cni.sh"
+	disableDefaultCNIScript script = "10-disable-default-cni.sh"
 
 	// installMicroK8sScript installs MicroK8s on the host.
 	installMicroK8sScript script = "00-install-microk8s.sh"
