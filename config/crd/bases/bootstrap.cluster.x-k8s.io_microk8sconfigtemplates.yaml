@@ -188,6 +188,9 @@ spec:
                           snapstoreProxyId:
                             description: The snap store proxy ID
                             type: string
+                          useDefaultCNI:
+                            description: Whether or not to use the default CNI
+                            type: boolean
                         type: object
                     type: object
                 type: object

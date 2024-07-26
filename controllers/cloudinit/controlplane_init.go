@@ -57,6 +57,8 @@ type ControlPlaneInitInput struct {
 	Confinement string
 	// RiskLevel specifies the risk level (strict, candidate, beta, edge) for the snap channels.
 	RiskLevel string
+	// DisableDefaultCNI specifies whether to disable the default CNI plugin.
+	DisableDefaultCNI bool
 	// SnapstoreProxyDomain specifies the domain of the snapstore proxy if one is to be used.
 	SnapstoreProxyDomain string
 	// SnapstoreProxyId specifies the snapstore proxy ID if one is to be used.
@@ -141,7 +143,13 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreHTTPProxyScript), input.SnapstoreHTTPProxy, input.SnapstoreHTTPSProxy),
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreProxyScript), input.SnapstoreProxyDomain, input.SnapstoreProxyId),
 		scriptPath(disableHostServicesScript),
-		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
+		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs))
+
+	if input.DisableDefaultCNI {
+		cloudConfig.RunCommands = append(cloudConfig.RunCommands, scriptPath(disableDefaultCNIScript))
+	}
+
+	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
 		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
 		scriptPath(configureKubeletScript),
 		scriptPath(waitAPIServerScript),

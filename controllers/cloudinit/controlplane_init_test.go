@@ -38,6 +38,7 @@ func TestControlPlaneInit(t *testing.T) {
 			IPinIP:               true,
 			Token:                strings.Repeat("a", 32),
 			TokenTTL:             10000,
+			DisableDefaultCNI:    true,
 			Confinement:          "classic",
 		})
 		g.Expect(err).NotTo(HaveOccurred())
@@ -48,6 +49,7 @@ func TestControlPlaneInit(t *testing.T) {
 			`/capi-scripts/00-configure-snapstore-proxy.sh "" ""`,
 			`/capi-scripts/00-disable-host-services.sh`,
 			`/capi-scripts/00-install-microk8s.sh "--channel 1.25 --classic"`,
+			`/capi-scripts/00-disable-default-cni.sh`,
 			`/capi-scripts/10-configure-containerd-proxy.sh "" "" ""`,
 			`/capi-scripts/10-configure-kubelet.sh`,
 			`/capi-scripts/50-wait-apiserver.sh`,
