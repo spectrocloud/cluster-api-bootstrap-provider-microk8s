@@ -237,6 +237,7 @@ func TestCloudConfigInput(t *testing.T) {
 						KubernetesVersion:    "v1.25.0",
 						Token:                strings.Repeat("a", 32),
 						TokenTTL:             100,
+						SnapstoreProxyScheme: "https",
 						SnapstoreProxyDomain: "snapstore.domain.com",
 						SnapstoreProxyId:     "ID123456789",
 					})
@@ -249,6 +250,7 @@ func TestCloudConfigInput(t *testing.T) {
 						KubernetesVersion:    "v1.25.0",
 						Token:                strings.Repeat("a", 32),
 						TokenTTL:             100,
+						SnapstoreProxyScheme: "https",
 						SnapstoreProxyDomain: "snapstore.domain.com",
 						SnapstoreProxyId:     "ID123456789",
 					})
@@ -260,6 +262,7 @@ func TestCloudConfigInput(t *testing.T) {
 					return cloudinit.NewJoinWorker(&cloudinit.WorkerInput{
 						KubernetesVersion:    "v1.25.0",
 						Token:                strings.Repeat("a", 32),
+						SnapstoreProxyScheme: "https",
 						SnapstoreProxyDomain: "snapstore.domain.com",
 						SnapstoreProxyId:     "ID123456789",
 					})
@@ -271,7 +274,7 @@ func TestCloudConfigInput(t *testing.T) {
 				c, err := tc.makeCloudConfig()
 				g.Expect(err).NotTo(HaveOccurred())
 
-				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/00-configure-snapstore-proxy.sh "snapstore.domain.com" "ID123456789"`))
+				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/00-configure-snapstore-proxy.sh "https" "snapstore.domain.com" "ID123456789"`))
 			})
 		}
 	})
