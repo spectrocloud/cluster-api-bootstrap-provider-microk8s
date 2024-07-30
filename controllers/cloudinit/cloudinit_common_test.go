@@ -78,9 +78,9 @@ func TestCloudConfigInput(t *testing.T) {
 								g.Expect(err).NotTo(HaveOccurred())
 
 								if confinement == "classic" {
-									g.Expect(c.RunCommands).To(ContainElement(fmt.Sprintf(`/capi-scripts/00-install-microk8s.sh "--channel 1.25/%s --classic"`, risk)))
+									g.Expect(c.RunCommands).To(ContainElement(fmt.Sprintf(`/capi-scripts/00-install-microk8s.sh "--channel 1.25/%s --classic" false`, risk)))
 								} else {
-									g.Expect(c.RunCommands).To(ContainElement(fmt.Sprintf(`/capi-scripts/00-install-microk8s.sh "--channel 1.25-strict/%s"`, risk)))
+									g.Expect(c.RunCommands).To(ContainElement(fmt.Sprintf(`/capi-scripts/00-install-microk8s.sh "--channel 1.25-strict/%s" false`, risk)))
 								}
 
 								_, err = cloudinit.GenerateCloudConfig(c)
@@ -89,6 +89,48 @@ func TestCloudConfigInput(t *testing.T) {
 						}
 					})
 				}
+			})
+		}
+	})
+
+	t.Run("DisableDefaultCNI", func(t *testing.T) {
+		for _, tc := range []struct {
+			name            string
+			makeCloudConfig func() (*cloudinit.CloudConfig, error)
+		}{
+			{
+				name: "ControlPlaneJoin",
+				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+					return cloudinit.NewJoinControlPlane(&cloudinit.ControlPlaneJoinInput{
+						KubernetesVersion: "v1.25.0",
+						Confinement:       "classic",
+						Token:             strings.Repeat("a", 32),
+						TokenTTL:          100,
+						DisableDefaultCNI: true,
+					})
+				},
+			},
+			{
+				name: "ControlPlaneInit",
+				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+					return cloudinit.NewInitControlPlane(&cloudinit.ControlPlaneInitInput{
+						KubernetesVersion: "v1.25.0",
+						Confinement:       "classic",
+						Token:             strings.Repeat("a", 32),
+						TokenTTL:          100,
+						DisableDefaultCNI: true,
+					})
+				},
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				g := NewWithT(t)
+				c, err := tc.makeCloudConfig()
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/00-install-microk8s.sh "--channel 1.25 --classic" true`))
+				_, err = cloudinit.GenerateCloudConfig(c)
+				g.Expect(err).NotTo(HaveOccurred())
 			})
 		}
 	})
@@ -379,82 +421,6 @@ func TestCloudConfigInput(t *testing.T) {
 				g.Expect(c.BootCommands).To(ConsistOf(`cmd1`))
 				g.Expect(c.RunCommands).To(ContainElement(`cmd2`))
 				g.Expect(c.RunCommands[len(c.RunCommands)-1]).To(Equal(`cmd3`))
-			})
-		}
-	})
-
-	t.Run("DisableDefaultCNI", func(t *testing.T) {
-		for _, tc := range []struct {
-			name            string
-			makeCloudConfig func() (*cloudinit.CloudConfig, error)
-		}{
-			{
-				name: "ControlPlaneInit",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
-					return cloudinit.NewInitControlPlane(&cloudinit.ControlPlaneInitInput{
-						DisableDefaultCNI: true,
-						KubernetesVersion: "v1.25.0",
-						Token:             strings.Repeat("a", 32),
-						TokenTTL:          100,
-					})
-				},
-			},
-			{
-				name: "ControlPlaneJoin",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
-					return cloudinit.NewJoinControlPlane(&cloudinit.ControlPlaneJoinInput{
-						DisableDefaultCNI: true,
-						KubernetesVersion: "v1.25.0",
-						Token:             strings.Repeat("a", 32),
-						TokenTTL:          100,
-					})
-				},
-			},
-		} {
-			t.Run(tc.name, func(t *testing.T) {
-				g := NewWithT(t)
-				c, err := tc.makeCloudConfig()
-				g.Expect(err).NotTo(HaveOccurred())
-
-				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/10-disable-default-cni.sh`))
-			})
-		}
-	})
-
-	t.Run("DefaultCNI", func(t *testing.T) {
-		for _, tc := range []struct {
-			name            string
-			makeCloudConfig func() (*cloudinit.CloudConfig, error)
-		}{
-			{
-				name: "ControlPlaneInit",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
-					return cloudinit.NewInitControlPlane(&cloudinit.ControlPlaneInitInput{
-						DisableDefaultCNI: false,
-						KubernetesVersion: "v1.25.0",
-						Token:             strings.Repeat("a", 32),
-						TokenTTL:          100,
-					})
-				},
-			},
-			{
-				name: "ControlPlaneJoin",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
-					return cloudinit.NewJoinControlPlane(&cloudinit.ControlPlaneJoinInput{
-						DisableDefaultCNI: false,
-						KubernetesVersion: "v1.25.0",
-						Token:             strings.Repeat("a", 32),
-						TokenTTL:          100,
-					})
-				},
-			},
-		} {
-			t.Run(tc.name, func(t *testing.T) {
-				g := NewWithT(t)
-				c, err := tc.makeCloudConfig()
-				g.Expect(err).NotTo(HaveOccurred())
-
-				g.Expect(c.RunCommands).NotTo(ContainElement(`/capi-scripts/10-disable-default-cni.sh`))
 			})
 		}
 	})

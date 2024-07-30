@@ -42,7 +42,7 @@ func TestWorkerJoin(t *testing.T) {
 			`/capi-scripts/00-configure-snapstore-http-proxy.sh "" ""`,
 			`/capi-scripts/00-configure-snapstore-proxy.sh "" ""`,
 			`/capi-scripts/00-disable-host-services.sh`,
-			`/capi-scripts/00-install-microk8s.sh "--channel 1.24 --classic"`,
+			`/capi-scripts/00-install-microk8s.sh "--channel 1.24 --classic" false`,
 			`/capi-scripts/10-configure-containerd-proxy.sh "" "" ""`,
 			`/capi-scripts/10-configure-kubelet.sh`,
 			`/capi-scripts/50-wait-apiserver.sh`,

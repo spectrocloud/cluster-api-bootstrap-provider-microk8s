@@ -43,9 +43,6 @@ const (
 	// disableHostServicesScript disables services like containerd or kubelet from the host OS image.
 	disableHostServicesScript script = "00-disable-host-services.sh"
 
-	// disableDefaultCNIScript disables the default CNI plugin.
-	disableDefaultCNIScript script = "10-disable-default-cni.sh"
-
 	// installMicroK8sScript installs MicroK8s on the host.
 	installMicroK8sScript script = "00-install-microk8s.sh"
 
@@ -88,7 +85,6 @@ var allScripts = []script{
 	snapstoreHTTPProxyScript,
 	disableHostServicesScript,
 	installMicroK8sScript,
-	disableDefaultCNIScript,
 	configureCertLB,
 	configureAPIServerScript,
 	configureCalicoIPIPScript,
