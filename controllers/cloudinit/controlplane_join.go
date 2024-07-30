@@ -55,7 +55,7 @@ type ControlPlaneJoinInput struct {
 	RiskLevel string
 	// DisableDefaultCNI specifies whether to use the default CNI plugin.
 	DisableDefaultCNI bool
-	// SnapstoreProxyScheme specifies the scheme (i.e https://) of the domain.
+	// SnapstoreProxyScheme specifies the scheme (e.g https://) of the domain.
 	SnapstoreProxyScheme string
 	// SnapstoreProxyDomain specifies the domain of the snapstore proxy if one is to be used.
 	SnapstoreProxyDomain string
