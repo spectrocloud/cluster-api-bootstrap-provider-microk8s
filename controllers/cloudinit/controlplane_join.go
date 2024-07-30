@@ -53,6 +53,8 @@ type ControlPlaneJoinInput struct {
 	Confinement string
 	// RiskLevel specifies the risk level (strict, candidate, beta, edge) for the snap channels.
 	RiskLevel string
+	// DisableDefaultCNI specifies whether to use the default CNI plugin.
+	DisableDefaultCNI bool
 	// SnapstoreProxyDomain specifies the domain of the snapstore proxy if one is to be used.
 	SnapstoreProxyDomain string
 	// SnapstoreProxyId specifies the snapstore proxy ID if one is to be used.
@@ -127,6 +129,13 @@ func NewJoinControlPlane(input *ControlPlaneJoinInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
 		scriptPath(configureKubeletScript),
 		scriptPath(waitAPIServerScript),
+	)
+
+	if input.DisableDefaultCNI {
+		cloudConfig.RunCommands = append(cloudConfig.RunCommands, scriptPath(disableDefaultCNIScript))
+	}
+
+	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
 		fmt.Sprintf("%s %v", scriptPath(configureCalicoIPIPScript), input.IPinIP),
 		fmt.Sprintf("%s %q", scriptPath(configureClusterAgentPortScript), input.ClusterAgentPort),
 		fmt.Sprintf("%s %q", scriptPath(configureDqlitePortScript), input.DqlitePort),

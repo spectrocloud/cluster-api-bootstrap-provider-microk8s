@@ -81,6 +81,10 @@ type InitConfiguration struct {
 	// +kubebuilder:default:=stable
 	RiskLevel string `json:"riskLevel,omitempty"`
 
+	// Whether or not to use the default CNI
+	// +optional
+	DisableDefaultCNI bool `json:"disableDefaultCNI,omitempty"`
+
 	// The snap store proxy domain
 	// +optional
 	SnapstoreProxyDomain string `json:"snapstoreProxyDomain,omitempty"`

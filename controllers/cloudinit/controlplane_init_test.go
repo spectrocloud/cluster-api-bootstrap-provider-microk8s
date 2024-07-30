@@ -38,6 +38,7 @@ func TestControlPlaneInit(t *testing.T) {
 			IPinIP:               true,
 			Token:                strings.Repeat("a", 32),
 			TokenTTL:             10000,
+			DisableDefaultCNI:    true,
 			Confinement:          "classic",
 		})
 		g.Expect(err).NotTo(HaveOccurred())
@@ -51,6 +52,7 @@ func TestControlPlaneInit(t *testing.T) {
 			`/capi-scripts/10-configure-containerd-proxy.sh "" "" ""`,
 			`/capi-scripts/10-configure-kubelet.sh`,
 			`/capi-scripts/50-wait-apiserver.sh`,
+			`/capi-scripts/10-disable-default-cni.sh`,
 			`microk8s refresh-certs /var/tmp`,
 			`/capi-scripts/10-configure-calico-ipip.sh true`,
 			`/capi-scripts/10-configure-cluster-agent-port.sh "30000"`,
