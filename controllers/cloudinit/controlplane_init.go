@@ -59,6 +59,8 @@ type ControlPlaneInitInput struct {
 	RiskLevel string
 	// DisableDefaultCNI specifies whether to disable the default CNI plugin.
 	DisableDefaultCNI bool
+	// SnapstoreProxyScheme specifies the scheme (e.g. http or https) of the domain. Defaults to "http".
+	SnapstoreProxyScheme string
 	// SnapstoreProxyDomain specifies the domain of the snapstore proxy if one is to be used.
 	SnapstoreProxyDomain string
 	// SnapstoreProxyId specifies the snapstore proxy ID if one is to be used.
@@ -86,6 +88,10 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 	}
 	if input.TokenTTL <= 0 {
 		return nil, fmt.Errorf("join token TTL %q is not a positive number", input.TokenTTL)
+	}
+
+	if input.SnapstoreProxyScheme == "" {
+		input.SnapstoreProxyScheme = "http"
 	}
 
 	// figure out endpoint type
@@ -141,7 +147,7 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands, input.PreRunCommands...)
 	cloudConfig.RunCommands = append(cloudConfig.RunCommands,
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreHTTPProxyScript), input.SnapstoreHTTPProxy, input.SnapstoreHTTPSProxy),
-		fmt.Sprintf("%s %q %q", scriptPath(snapstoreProxyScript), input.SnapstoreProxyDomain, input.SnapstoreProxyId),
+		fmt.Sprintf("%s %q %q %q", scriptPath(snapstoreProxyScript), input.SnapstoreProxyScheme, input.SnapstoreProxyDomain, input.SnapstoreProxyId),
 		scriptPath(disableHostServicesScript),
 		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
 		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
