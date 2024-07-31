@@ -86,6 +86,7 @@ type InitConfiguration struct {
 	DisableDefaultCNI bool `json:"disableDefaultCNI,omitempty"`
 
 	// The snap store proxy domain's scheme, e.g. "http" or "https" without "://"
+	// Defaults to "http".
 	// +optional
 	SnapstoreProxyScheme string `json:"snapstoreProxyScheme,omitempty"`
 

@@ -55,7 +55,7 @@ type ControlPlaneJoinInput struct {
 	RiskLevel string
 	// DisableDefaultCNI specifies whether to use the default CNI plugin.
 	DisableDefaultCNI bool
-	// SnapstoreProxyScheme specifies the scheme (e.g https://) of the domain.
+	// SnapstoreProxyScheme specifies the scheme (e.g. http or https) of the domain. Defaults to "http".
 	SnapstoreProxyScheme string
 	// SnapstoreProxyDomain specifies the domain of the snapstore proxy if one is to be used.
 	SnapstoreProxyDomain string
@@ -103,6 +103,10 @@ func NewJoinControlPlane(input *ControlPlaneJoinInput) (*CloudConfig, error) {
 		return nil, fmt.Errorf("strict confinement is only available for microk8s v1.25+")
 	}
 	installArgs := createInstallArgs(input.Confinement, input.RiskLevel, kubernetesVersion)
+
+	if input.SnapstoreProxyScheme == "" {
+		input.SnapstoreProxyScheme = "http"
+	}
 
 	cloudConfig := NewBaseCloudConfig()
 	cloudConfig.WriteFiles = append(cloudConfig.WriteFiles, input.ExtraWriteFiles...)

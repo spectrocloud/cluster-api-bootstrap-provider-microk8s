@@ -228,16 +228,16 @@ func TestCloudConfigInput(t *testing.T) {
 	t.Run("SnapstoreProxy", func(t *testing.T) {
 		for _, tc := range []struct {
 			name            string
-			makeCloudConfig func() (*cloudinit.CloudConfig, error)
+			makeCloudConfig func(scheme string) (*cloudinit.CloudConfig, error)
 		}{
 			{
 				name: "ControlPlaneInit",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+				makeCloudConfig: func(scheme string) (*cloudinit.CloudConfig, error) {
 					return cloudinit.NewInitControlPlane(&cloudinit.ControlPlaneInitInput{
 						KubernetesVersion:    "v1.25.0",
 						Token:                strings.Repeat("a", 32),
 						TokenTTL:             100,
-						SnapstoreProxyScheme: "https",
+						SnapstoreProxyScheme: scheme,
 						SnapstoreProxyDomain: "snapstore.domain.com",
 						SnapstoreProxyId:     "ID123456789",
 					})
@@ -245,12 +245,12 @@ func TestCloudConfigInput(t *testing.T) {
 			},
 			{
 				name: "ControlPlaneJoin",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+				makeCloudConfig: func(scheme string) (*cloudinit.CloudConfig, error) {
 					return cloudinit.NewJoinControlPlane(&cloudinit.ControlPlaneJoinInput{
 						KubernetesVersion:    "v1.25.0",
 						Token:                strings.Repeat("a", 32),
 						TokenTTL:             100,
-						SnapstoreProxyScheme: "https",
+						SnapstoreProxyScheme: scheme,
 						SnapstoreProxyDomain: "snapstore.domain.com",
 						SnapstoreProxyId:     "ID123456789",
 					})
@@ -258,11 +258,11 @@ func TestCloudConfigInput(t *testing.T) {
 			},
 			{
 				name: "Worker",
-				makeCloudConfig: func() (*cloudinit.CloudConfig, error) {
+				makeCloudConfig: func(scheme string) (*cloudinit.CloudConfig, error) {
 					return cloudinit.NewJoinWorker(&cloudinit.WorkerInput{
 						KubernetesVersion:    "v1.25.0",
 						Token:                strings.Repeat("a", 32),
-						SnapstoreProxyScheme: "https",
+						SnapstoreProxyScheme: scheme,
 						SnapstoreProxyDomain: "snapstore.domain.com",
 						SnapstoreProxyId:     "ID123456789",
 					})
@@ -271,10 +271,22 @@ func TestCloudConfigInput(t *testing.T) {
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				g := NewWithT(t)
-				c, err := tc.makeCloudConfig()
-				g.Expect(err).NotTo(HaveOccurred())
 
-				g.Expect(c.RunCommands).To(ContainElement(`/capi-scripts/00-configure-snapstore-proxy.sh "https" "snapstore.domain.com" "ID123456789"`))
+				for _, withScheme := range []string{"", "http", "https"} {
+					t.Run(fmt.Sprintf("withScheme=%q", withScheme), func(t *testing.T) {
+						c, err := tc.makeCloudConfig(withScheme)
+						g.Expect(err).NotTo(HaveOccurred())
+
+						// if scheme is unspecified, default to http
+						var expectedScheme string
+						if withScheme == "" {
+							expectedScheme = "http"
+						} else {
+							expectedScheme = withScheme
+						}
+						g.Expect(c.RunCommands).To(ContainElement(fmt.Sprintf(`/capi-scripts/00-configure-snapstore-proxy.sh %q "snapstore.domain.com" "ID123456789"`, expectedScheme)))
+					})
+				}
 			})
 		}
 	})

@@ -85,6 +85,10 @@ func NewJoinWorker(input *WorkerInput) (*CloudConfig, error) {
 		return nil, fmt.Errorf("strict confinement is only available for microk8s v1.25+")
 	}
 
+	if input.SnapstoreProxyScheme == "" {
+		input.SnapstoreProxyScheme = "http"
+	}
+
 	stopApiServerProxyRefreshes := "no"
 	if kubernetesVersion.Minor() > 24 {
 		stopApiServerProxyRefreshes = "yes"

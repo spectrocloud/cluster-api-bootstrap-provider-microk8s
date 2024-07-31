@@ -59,7 +59,7 @@ type ControlPlaneInitInput struct {
 	RiskLevel string
 	// DisableDefaultCNI specifies whether to disable the default CNI plugin.
 	DisableDefaultCNI bool
-	// SnapstoreProxyScheme specifies the scheme (i.e https://) of the domain.
+	// SnapstoreProxyScheme specifies the scheme (e.g. http or https) of the domain. Defaults to "http".
 	SnapstoreProxyScheme string
 	// SnapstoreProxyDomain specifies the domain of the snapstore proxy if one is to be used.
 	SnapstoreProxyDomain string
@@ -88,6 +88,10 @@ func NewInitControlPlane(input *ControlPlaneInitInput) (*CloudConfig, error) {
 	}
 	if input.TokenTTL <= 0 {
 		return nil, fmt.Errorf("join token TTL %q is not a positive number", input.TokenTTL)
+	}
+
+	if input.SnapstoreProxyScheme == "" {
+		input.SnapstoreProxyScheme = "http"
 	}
 
 	// figure out endpoint type
