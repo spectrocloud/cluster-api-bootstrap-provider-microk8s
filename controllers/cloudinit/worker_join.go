@@ -118,7 +118,7 @@ func NewJoinWorker(input *WorkerInput) (*CloudConfig, error) {
 		fmt.Sprintf("%s %q %q", scriptPath(snapstoreHTTPProxyScript), input.SnapstoreHTTPProxy, input.SnapstoreHTTPSProxy),
 		fmt.Sprintf("%s %q %q %q", scriptPath(snapstoreProxyScript), input.SnapstoreProxyScheme, input.SnapstoreProxyDomain, input.SnapstoreProxyId),
 		scriptPath(disableHostServicesScript),
-		fmt.Sprintf("%s %q", scriptPath(installMicroK8sScript), installArgs),
+		fmt.Sprintf("%s %q %v", scriptPath(installMicroK8sScript), installArgs, false),
 		fmt.Sprintf("%s %q %q %q", scriptPath(configureContainerdProxyScript), input.ContainerdHTTPProxy, input.ContainerdHTTPSProxy, input.ContainerdNoProxy),
 		scriptPath(configureKubeletScript),
 		scriptPath(waitAPIServerScript),
