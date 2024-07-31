@@ -46,7 +46,7 @@ type WorkerInput struct {
 	Confinement string
 	// RiskLevel specifies the risk level (strict, candidate, beta, edge) for the snap channels.
 	RiskLevel string
-	// SnapstoreProxyScheme specifies the scheme (i.e https://) of the domain.
+	// SnapstoreProxyScheme specifies the scheme (e.g http or https) of the domain. Defaults to http.
 	SnapstoreProxyScheme string
 	// SnapstoreProxyDomain specifies the domain of the snapstore proxy if one is to be used.
 	SnapstoreProxyDomain string
