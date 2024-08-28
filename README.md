@@ -44,7 +44,7 @@ Alternatively, you can build the providers manually as described in the followin
 
 
 
-### Building from sourcebssdfsdfsdfsdfsdfsdsdfsdfsfdsfdsfsdfsdfsd
+### Building from source
 
   * Install the cluster provider of your choice. Have a look at the [cluster API book](https://cluster-api.sigs.k8s.io/user/quick-start.html#initialization-for-common-providers) for your options at this step. You should deploy only the infrastructure controller leaving the bootstrap and control plane ones empty. For example assuming we want to provision a MicroK8s cluster on AWS:
 ```bash
