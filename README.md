@@ -9,12 +9,12 @@ This project offers a cluster API bootstrap provider controller that manages the
 ### Prerequisites
 
   * Install clusterctl following the [upstream instructions](https://cluster-api.sigs.k8s.io/user/quick-start.html#install-clusterctl)
-```
+```bash
 curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/clusterctl-linux-amd64 -o clusterctl
 ```
 
   * Install a bootstrap Kubernetes cluster. To use MicroK8s as a bootstrap cluster:
-```
+```bash
 sudo snap install microk8s --classic
 sudo microk8s.config  > ~/.kube/config
 sudo microk8s enable dns
@@ -24,7 +24,7 @@ sudo microk8s enable dns
 
 To to configure clusterctl with the two MicroK8s providers edit `~/.cluster-api/clusterctl.yaml`
 and add the following:
-```
+```yaml
 providers:
   - name: "microk8s"
     url: "https://github.com/canonical/cluster-api-bootstrap-provider-microk8s/releases/latest/bootstrap-components.yaml"
@@ -44,21 +44,21 @@ Alternatively, you can build the providers manually as described in the followin
 
 
 
-### Building from source
+### Building from sourcebssdfsdfsdfsdfsdfsdsdfsdfsfdsfdsfsdfsdfsd
 
   * Install the cluster provider of your choice. Have a look at the [cluster API book](https://cluster-api.sigs.k8s.io/user/quick-start.html#initialization-for-common-providers) for your options at this step. You should deploy only the infrastructure controller leaving the bootstrap and control plane ones empty. For example assuming we want to provision a MicroK8s cluster on AWS:
-```
+```bash
 clusterctl init --infrastructure aws --bootstrap "-" --control-plane "-"
 ```
 
   * Clone the two cluster API MicroK8s specific repositories and start the controllers on two separate terminals:
-```
+```bash
 cd $GOPATH/src/github.com/canonical/cluster-api-bootstrap-provider-microk8s/
 make install
 make run
 ```
 And:
-```
+```bash
 cd $GOPATH/src/github.com/canonical/cluster-api-control-plane-provider-microk8s/
 make install
 make run

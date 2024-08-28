@@ -108,3 +108,5 @@ spec:
       initConfiguration:
         riskLevel: "${SNAP_RISKLEVEL:=}"
         confinement: "${SNAP_CONFINEMENT:=}"
+        disableDefaultCNI: ${DISABLE_DEFAULT_CNI:=false}
+        postRunCommands: ${POST_RUN_COMMANDS:=[]}

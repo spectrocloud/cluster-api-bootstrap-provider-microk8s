@@ -45,7 +45,7 @@ func init() {
 
 // TestBasic waits for the target cluster to deploy and start a 30 pod deployment.
 // The CLUSTER_MANIFEST_FILE environment variable should point to a manifest with the target cluster
-// kubectl and clusterctl have to be avaibale in the caller's path.
+// kubectl and clusterctl have to be available in the caller's path.
 // kubectl should be setup so it uses the kubeconfig of the management cluster by default.
 func TestBasic(t *testing.T) {
 	cluster_manifest_file := os.Getenv("CLUSTER_MANIFEST_FILE")
@@ -88,7 +88,29 @@ func TestInPlaceUpgrade(t *testing.T) {
 	// Important: the cluster is deleted in the Cleanup function
 	// which is called after all subtests are finished.
 	t.Logf("Deleting the cluster")
+}
 
+// TestDisableDefaultCNI deploys cluster disabled  defalut CNI  .
+// The CLUSTER_DISABLE_DEFAULT_CNI_MANIFEST_FILE environment variable should point to a manifest with the target cluster
+// With post actions calico will be installed.
+func TestDisableDefaultCNI(t *testing.T) {
+	cluster_manifest_file := os.Getenv("CLUSTER_DISABLE_DEFAULT_CNI_MANIFEST_FILE")
+	if cluster_manifest_file == "" {
+		t.Fatalf("Environment variable CLUSTER_DISABLE_DEFAULT_CNI_MANIFEST_FILE is not set. " +
+			"CLUSTER_DISABLE_DEFAULT_CNI_MANIFEST_FILE is expected to hold the PATH to a cluster manifest.")
+	}
+	t.Logf("Cluster to setup is in %s", cluster_manifest_file)
+
+	setupCheck(t)
+	t.Cleanup(teardownCluster)
+
+	t.Run("DeployCluster", func(t *testing.T) { deployCluster(t, os.Getenv("CLUSTER_DISABLE_DEFAULT_CNI_MANIFEST_FILE")) })
+	t.Run("ValidateCalico", func(t *testing.T) { validateCalico(t) })
+	t.Run("DeployMicrobot", func(t *testing.T) { deployMicrobot(t) })
+	t.Run("UpgradeClusterRollout", func(t *testing.T) { upgradeCluster(t, "RollingUpgrade") })
+	// Important: the cluster is deleted in the Cleanup function
+	// which is called after all subtests are finished.
+	t.Logf("Deleting the cluster")
 }
 
 // setupCheck checks that the environment is ready to run the tests.
@@ -149,7 +171,7 @@ func teardownCluster() {
 
 // deployCluster deploys a cluster using the manifest in CLUSTER_MANIFEST_FILE.
 func deployCluster(t testing.TB, cluster_manifest_file string) {
-	t.Log("Setting up the cluster")
+	t.Logf("Setting up the cluster using %s", cluster_manifest_file)
 	command := []string{"kubectl", "apply", "-f", cluster_manifest_file}
 	cmd := exec.Command(command[0], command[1:]...)
 	outputBytes, err := cmd.CombinedOutput()
@@ -182,7 +204,7 @@ func deployCluster(t testing.TB, cluster_manifest_file string) {
 				t.Fatal(err)
 			} else {
 				attempt++
-				t.Log("Failed to get the target's kubeconfig, retrying.")
+				t.Logf("Failed to get the target's kubeconfig for %s, retrying.", cluster)
 				time.Sleep(20 * time.Second)
 			}
 		} else {
@@ -307,6 +329,32 @@ func deployMicrobot(t testing.TB) {
 	command = []string{"kubectl", "--kubeconfig=" + KUBECONFIG, "wait", "deploy/bot", "--for=jsonpath={.status.readyReplicas}=30"}
 	for {
 		cmd = exec.Command(command[0], command[1:]...)
+		outputBytes, err = cmd.CombinedOutput()
+		if err != nil {
+			t.Log(string(outputBytes))
+			if attempt >= maxAttempts {
+				t.Fatal(err)
+			} else {
+				attempt++
+				t.Log("Retrying")
+				time.Sleep(10 * time.Second)
+			}
+		} else {
+			break
+		}
+	}
+}
+
+// validateCalico checks a deployment of calico demonset.
+func validateCalico(t testing.TB) {
+	t.Log("Validate Calico")
+	// Make sure we have as many nodes as machines
+	attempt := 0
+	maxAttempts := 60
+	t.Log("Waiting for the deployment to complete")
+	command := []string{"kubectl", "--kubeconfig=" + KUBECONFIG, "-n", "kube-system", "wait", "ds/calico-node", "--for=jsonpath={.status.numberAvailable}=6"}
+	for {
+		cmd := exec.Command(command[0], command[1:]...)
 		outputBytes, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Log(string(outputBytes))
