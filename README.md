@@ -9,12 +9,12 @@ This project offers a cluster API bootstrap provider controller that manages the
 ### Prerequisites
 
   * Install clusterctl following the [upstream instructions](https://cluster-api.sigs.k8s.io/user/quick-start.html#install-clusterctl)
-```bash
+```
 curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.3/clusterctl-linux-amd64 -o clusterctl
 ```
 
   * Install a bootstrap Kubernetes cluster. To use MicroK8s as a bootstrap cluster:
-```bash
+```
 sudo snap install microk8s --classic
 sudo microk8s.config  > ~/.kube/config
 sudo microk8s enable dns
@@ -24,7 +24,7 @@ sudo microk8s enable dns
 
 To to configure clusterctl with the two MicroK8s providers edit `~/.cluster-api/clusterctl.yaml`
 and add the following:
-```yaml
+```
 providers:
   - name: "microk8s"
     url: "https://github.com/canonical/cluster-api-bootstrap-provider-microk8s/releases/latest/bootstrap-components.yaml"
@@ -47,18 +47,18 @@ Alternatively, you can build the providers manually as described in the followin
 ### Building from source
 
   * Install the cluster provider of your choice. Have a look at the [cluster API book](https://cluster-api.sigs.k8s.io/user/quick-start.html#initialization-for-common-providers) for your options at this step. You should deploy only the infrastructure controller leaving the bootstrap and control plane ones empty. For example assuming we want to provision a MicroK8s cluster on AWS:
-```bash
+```
 clusterctl init --infrastructure aws --bootstrap "-" --control-plane "-"
 ```
 
   * Clone the two cluster API MicroK8s specific repositories and start the controllers on two separate terminals:
-```bash
+```
 cd $GOPATH/src/github.com/canonical/cluster-api-bootstrap-provider-microk8s/
 make install
 make run
 ```
 And:
-```bash
+```
 cd $GOPATH/src/github.com/canonical/cluster-api-control-plane-provider-microk8s/
 make install
 make run
@@ -68,7 +68,7 @@ make run
 
 As soon as the bootstrap and control-plane controllers are up and running you can apply the cluster manifests describing the desired specs of the cluster you want to provision. Each machine is associated with a MicroK8sConfig through which you can set the cluster's properties. Please review  the available options in [the respective definitions file](./apis/v1beta1/microk8sconfig_types.go). You may also find useful the example manifests found under the [examples](./examples/) directory. Note that the configuration structure followed is similar to the the one of kubeadm, in the MicroK8sConfig you will find a CLusterConfiguration and an InitConfiguration sections. When targeting a specific infrastructure you should be aware of which ports are used by MicroK8s and allow them in the network security groups on your deployment.
 
-Two workload cluster templates are available under the [templates](./templates/) folder, which are actively used to validate releases:
+Two workload cluster templates are available under the [templates](./templates) folder, which are actively used to validate releases:
 - [AWS](./templates/cluster-template-aws.yaml), using the [AWS Infrastructure Provider](https://github.com/kubernetes-sigs/cluster-api-provider-aws)
 - [OpenStack](./templates/cluster-template-openstack.yaml), using the [OpenStack Infrastructure Provider](https://github.com/kubernetes-sigs/cluster-api-provider-openstack)
 
