@@ -85,9 +85,9 @@ func TestInPlaceUpgrade(t *testing.T) {
 	t.Logf("Deleting the cluster")
 }
 
-// TestDisableDefaultCNI deploys cluster disabled  default CNI.
+// TestDisableDefaultCNI deploys cluster disabled default CNI.
+// Next Cilium is installed
 // helm have to be available in the caller's path.
-// With post actions calico will be installed.
 func TestDisableDefaultCNI(t *testing.T) {
 	t.Logf("Cluster to setup is in %s", DisableDefaultCNIClusterPath)
 
