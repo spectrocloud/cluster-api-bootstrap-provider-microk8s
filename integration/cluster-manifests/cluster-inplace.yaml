@@ -39,7 +39,6 @@ spec:
       - dns
       - ingress
       confinement: classic
-      disableDefaultCNI: false
       joinTokenTTLInSecs: 900000
       riskLevel: stable
   machineTemplate:
@@ -113,5 +112,4 @@ spec:
         portCompatibilityRemap: true
       initConfiguration:
         confinement: classic
-        disableDefaultCNI: false
         riskLevel: stable

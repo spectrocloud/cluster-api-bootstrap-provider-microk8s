@@ -36,6 +36,8 @@ const (
 	DisableDefaultCNIClusterPath string = "cluster-manifests/cluster-disable-default-cni.yaml"
 	BasicClusterPath             string = "cluster-manifests/cluster.yaml"
 	InPlaceUpgradeClusterPath    string = "cluster-manifests/cluster-inplace.yaml"
+	retryMaxAttempts                    = 120
+	secondsBetweenAttempts              = 20
 )
 
 func init() {
@@ -126,24 +128,10 @@ func setupCheck(t testing.TB) {
 
 // waitForPod waits for a pod to be available.
 func waitForPod(t testing.TB, pod string, ns string) {
-	attempt := 0
-	maxAttempts := 10
+
 	command := []string{"kubectl", "wait", "--timeout=15s", "--for=condition=available", "deploy/" + pod, "-n", ns}
-	for {
-		cmd := exec.Command(command[0], command[1:]...)
-		outputBytes, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Log(string(outputBytes))
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				t.Logf("Retrying...")
-				attempt++
-				time.Sleep(10 * time.Second)
-			}
-		} else {
-			break
-		}
+	if err := retryableCommand(t, command); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -187,123 +175,63 @@ func deployCluster(t testing.TB, clusterManifestFile string) {
 	cluster := strings.Trim(string(outputBytes), "\n")
 	t.Logf("Cluster name is %s", cluster)
 
-	attempt := 0
-	maxAttempts := 120
 	command = []string{"clusterctl", "get", "kubeconfig", cluster}
-	for {
-		cmd = exec.Command(command[0], command[1:]...)
-		outputBytes, err = cmd.Output()
+	testFn := func(output string) bool {
+		cfg := strings.Trim(output, "\n")
+		err = os.WriteFile(KUBECONFIG, []byte(cfg), 0644)
 		if err != nil {
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				t.Logf("Failed to get the target's kubeconfig for %s, retrying.", cluster)
-				time.Sleep(20 * time.Second)
-			}
-		} else {
-			cfg := strings.Trim(string(outputBytes), "\n")
-			err = os.WriteFile(KUBECONFIG, []byte(cfg), 0644)
-			if err != nil {
-				t.Fatalf("Could not persist the targets kubeconfig file. %s", err)
-			}
-			t.Logf("Target's kubeconfig file is at %s", KUBECONFIG)
-			t.Log(cfg)
-			break
+			t.Fatalf("Could not persist the targets kubeconfig file. %s", err)
 		}
+		t.Logf("Target's kubeconfig file is at %s", KUBECONFIG)
+		t.Log(cfg)
+		return true
+	}
+	if err = retryableCommandWithConditionFunction(t, command, testFn); err != nil {
+		t.Fatal(err)
 	}
 
 	// Wait until the cluster is provisioned
-	attempt = 0
-	maxAttempts = 120
 	command = []string{"kubectl", "get", "cluster", cluster}
-	for {
-		cmd = exec.Command(command[0], command[1:]...)
-		outputBytes, err = cmd.CombinedOutput()
-		if err != nil {
-			t.Log(string(outputBytes))
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				t.Log("Retrying")
-				time.Sleep(10 * time.Second)
-			}
-		} else {
-			if strings.Contains(string(outputBytes), "Provisioned") {
-				break
-			} else {
-				attempt++
-				time.Sleep(20 * time.Second)
-				t.Log("Waiting for the cluster to be provisioned")
-			}
-		}
+	testFn = func(output string) bool {
+		return strings.Contains(output, "Provisioned")
+	}
+	if err = retryableCommandWithConditionFunction(t, command, testFn); err != nil {
+		t.Fatal(err)
 	}
 }
 
 // verifyCluster check if cluster is functional
 func verifyCluster(t testing.TB) {
 	// Wait until all machines are running
-	attempt := 0
-	maxAttempts := 120
+
 	machines := 0
 	command := []string{"kubectl", "get", "machine", "--no-headers"}
-	for {
-		cmd := exec.Command(command[0], command[1:]...)
-		outputBytes, err := cmd.CombinedOutput()
-		output := string(outputBytes)
-		if err != nil {
-			t.Log(output)
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				t.Log("Retrying")
-				time.Sleep(10 * time.Second)
-			}
-		} else {
-			machines = strings.Count(output, "\n")
-			running := strings.Count(output, "Running")
-			t.Logf("Machines %d out of which %d are Running", machines, running)
-			if machines == running {
-				break
-			} else {
-				attempt++
-				time.Sleep(10 * time.Second)
-				t.Log("Waiting for machines to start running")
-			}
+	testFn := func(output string) bool {
+		machines = strings.Count(output, "\n")
+		running := strings.Count(output, "Running")
+		t.Logf("Machines %d out of which %d are Running", machines, running)
+		if machines == running {
+			return true
 		}
+		return false
+	}
+	if err := retryableCommandWithConditionFunction(t, command, testFn); err != nil {
+		t.Fatal(err)
 	}
 
 	// Make sure we have as many nodes as machines
-	attempt = 0
-	maxAttempts = 120
 	command = []string{"kubectl", "--kubeconfig=" + KUBECONFIG, "get", "no", "--no-headers"}
-	for {
-		cmd := exec.Command(command[0], command[1:]...)
-		outputBytes, err := cmd.CombinedOutput()
-		output := string(outputBytes)
-		if err != nil {
-			t.Log(output)
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				time.Sleep(10 * time.Second)
-				t.Log("Retrying")
-			}
-		} else {
-			nodes := strings.Count(output, "\n")
-			ready := strings.Count(output, " Ready")
-			t.Logf("Machines are %d, Nodes are %d out of which %d are Ready", machines, nodes, ready)
-			if machines == nodes && ready == nodes {
-				break
-			} else {
-				attempt++
-				time.Sleep(20 * time.Second)
-				t.Log("Waiting for nodes to become ready")
-			}
+	testFn = func(output string) bool {
+		nodes := strings.Count(output, "\n")
+		ready := strings.Count(output, " Ready")
+		t.Logf("Machines are %d, Nodes are %d out of which %d are Ready", machines, nodes, ready)
+		if machines == nodes && ready == nodes {
+			return true
 		}
+		return false
+	}
+	if err := retryableCommandWithConditionFunction(t, command, testFn); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -320,54 +248,24 @@ func deployMicrobot(t testing.TB) {
 	}
 
 	// Make sure we have as many nodes as machines
-	attempt := 0
-	maxAttempts := 120
 	t.Log("Waiting for the deployment to complete")
 	command = []string{"kubectl", "--kubeconfig=" + KUBECONFIG, "wait", "deploy/bot", "--for=jsonpath={.status.readyReplicas}=30"}
-	for {
-		cmd = exec.Command(command[0], command[1:]...)
-		outputBytes, err = cmd.CombinedOutput()
-		if err != nil {
-			t.Log(string(outputBytes))
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				t.Log("Retrying")
-				time.Sleep(10 * time.Second)
-			}
-		} else {
-			break
-		}
+	if err = retryableCommand(t, command); err != nil {
+		t.Fatal(err)
 	}
 }
 
-// validateNoCalico checks a there is no calico daemon set.
+// validateNoCalico Checks if calico daemon set is not deployed on the cluster.
 func validateNoCalico(t testing.TB) {
 	t.Log("Validate no Calico daemon set")
 
 	t.Log("Checking for calico daemon set")
 	command := []string{"kubectl", "--kubeconfig=" + KUBECONFIG, "-n", "kube-system", "get", "ds"}
-	attempt := 0
-	maxAttempts := 120
-	for {
-		t.Logf("running command: %s", strings.Join(command, " "))
-		cmd := exec.Command(command[0], command[1:]...)
-		outputBytes, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Log(string(outputBytes))
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				t.Log("Retrying")
-				time.Sleep(10 * time.Second)
-			}
-		} else {
-			if !strings.Contains(string(outputBytes), "calico") {
-				break
-			}
-		}
+	testFn := func(output string) bool {
+		return !strings.Contains(output, "calico")
+	}
+	if err := retryableCommandWithConditionFunction(t, command, testFn); err != nil {
+		t.Fatal(err)
 	}
 	t.Log("No calico daemon set")
 }
@@ -398,52 +296,67 @@ func installCilium(t testing.TB) {
 func validateCilium(t testing.TB) {
 	t.Log("Validate Cilium")
 
-	//check control plane machine exists
-	attempt := 0
-	maxAttempts := 120
-	machines := 0
 	command := []string{"kubectl", "get", "machine", "--no-headers"}
-	for {
-		t.Logf("running command: %s", strings.Join(command, " "))
-		cmd := exec.Command(command[0], command[1:]...)
-		outputBytes, err := cmd.CombinedOutput()
-		output := string(outputBytes)
-		if err != nil {
-			t.Log(output)
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				t.Log("Retrying")
-				time.Sleep(10 * time.Second)
-			}
-		} else {
-			machines = strings.Count(output, "\n")
-			if machines > 0 {
-				break
-			}
-		}
+	machines := 0
+	testFn := func(output string) bool {
+		machines = strings.Count(output, "\n")
+		return machines > 0
+	}
+	if err := retryableCommandWithConditionFunction(t, command, testFn); err != nil {
+		t.Fatal(err)
 	}
 
 	t.Log("Checking Cilium daemon set")
 	command = []string{"kubectl", "--kubeconfig=" + KUBECONFIG, "-n", "kube-system", "wait", "ds/cilium", fmt.Sprintf("--for=jsonpath={.status.numberAvailable}=%d", machines)}
-	for {
+	if err := retryableCommand(t, command); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// retryableCommand runs command and retires if command fails.
+// Runs provided command, if commands return err retries it retryMaxAttempts and waits secondsBetweenAttempts between next execution.
+// If after all attempts error occurs error gets returned.
+func retryableCommand(t testing.TB, command []string) error {
+	var err error
+	var outputBytes []byte
+	for attempt := 0; attempt < retryMaxAttempts; attempt++ {
+		if attempt > 1 {
+			t.Logf("Retrying")
+			time.Sleep(secondsBetweenAttempts * time.Second)
+		}
+		t.Logf("running command: %s", strings.Join(command, " "))
 		cmd := exec.Command(command[0], command[1:]...)
-		outputBytes, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Logf("running command: %s", strings.Join(command, " "))
-			t.Log(string(outputBytes))
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			} else {
-				attempt++
-				t.Log("Retrying")
-				time.Sleep(20 * time.Second)
-			}
-		} else {
+		outputBytes, err = cmd.CombinedOutput()
+		t.Log(string(outputBytes))
+		if err == nil {
 			break
 		}
 	}
+	return err
+}
+
+// retryableCommandWithConditionFunction runs command with retry.
+// Runs provided command, if commands return err retries it retryMaxAttempts and waits secondsBetweenAttempts between next execution.
+// Additionally, to finish correctly runs function fn func(string) bool, if passed function returns true
+// the retryableCommandWithConditionFunction returns nil
+func retryableCommandWithConditionFunction(t testing.TB, command []string, fn func(string) bool) error {
+	var err error
+	var outputBytes []byte
+	for attempt := 0; attempt < retryMaxAttempts; attempt++ {
+		if attempt > 1 {
+			t.Logf("Retrying")
+			time.Sleep(secondsBetweenAttempts * time.Second)
+		}
+		t.Logf("running command: %s", strings.Join(command, " "))
+		cmd := exec.Command(command[0], command[1:]...)
+		outputBytes, err = cmd.CombinedOutput()
+		output := string(outputBytes)
+		t.Log(output)
+		if err == nil && fn(output) {
+			break
+		}
+	}
+	return err
 }
 
 // upgradeCluster upgrades the cluster to a new version based on the upgrade strategy.
@@ -473,37 +386,22 @@ func upgradeCluster(t testing.TB, upgradeStrategy string) {
 	time.Sleep(30 * time.Second)
 
 	// Now all the machines should be upgraded to the new version.
-	attempt := 0
-	maxAttempts := 120
+
 	command := []string{"kubectl", "get", "machine", "--no-headers"}
-	for {
-		cmd := exec.Command(command[0], command[1:]...)
-		outputBytes, err = cmd.CombinedOutput()
-		output := string(outputBytes)
-		if err != nil {
-			t.Log(output)
-			if attempt >= maxAttempts {
-				t.Fatal(err)
-			}
+	testFn := func(output string) bool {
+		totalMachines := strings.Count(output, "Running")
 
-			attempt++
-			t.Log("Retrying")
-			time.Sleep(20 * time.Second)
-		} else {
-			totalMachines := strings.Count(output, "Running")
-
-			// We count all the "Running" machines with the new version.
-			re := regexp.MustCompile("Running .* " + version)
-			upgradedMachines := len(re.FindAllString(output, -1))
-			t.Logf("Total machines %d out of which %d are upgraded", totalMachines, upgradedMachines)
-			if totalMachines == upgradedMachines {
-				break
-			} else {
-				attempt++
-				time.Sleep(20 * time.Second)
-				t.Log("Waiting for machines to upgrade and start running")
-			}
+		// We count all the "Running" machines with the new version.
+		re := regexp.MustCompile("Running .* " + version)
+		upgradedMachines := len(re.FindAllString(output, -1))
+		t.Logf("Total machines %d out of which %d are upgraded", totalMachines, upgradedMachines)
+		if totalMachines == upgradedMachines {
+			return true
 		}
+		return false
+	}
+	if err = retryableCommandWithConditionFunction(t, command, testFn); err != nil {
+		t.Fatal(err)
 	}
 }
 
