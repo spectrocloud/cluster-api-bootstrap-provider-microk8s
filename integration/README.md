@@ -7,7 +7,7 @@ The integration/e2e tests have the following prerequisites:
   * make sure to have ssh key in aws `capi`in `us-east-1 region` if you do not have key refer
     to CAPI on [AWS prerequisites documentation](https://cluster-api-aws.sigs.k8s.io/topics/using-clusterawsadm-to-fulfill-prerequisites#ssh-key-pair)
 
-  * to run tests locally you will need to have on path fallowing programs `clusterctl`, `kubectl`, `helm`
+  * local testing requires the following to be available in the PATH: `clusterctl`, `kubectl`, `helm`
 
   * a management cluster initialised via `clusterctl` with the infrastructure targeted as well as the version of the MicroK8s providers we want to be tested
 
@@ -68,7 +68,7 @@ kubectl apply -f bootstrap/bootstrap-components.yaml -f control-plane/control-pl
 ```
 ### Cluster definitions for e2e
 
-Cluster definition are stored in [`manifests`](./cluster-manifests) directory.
+Cluster definitions are stored in the [`manifests`](./cluster-manifests) directory.
 
 #### Trigger the e2e tests
 
