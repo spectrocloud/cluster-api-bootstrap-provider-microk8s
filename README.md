@@ -68,7 +68,7 @@ make run
 
 As soon as the bootstrap and control-plane controllers are up and running you can apply the cluster manifests describing the desired specs of the cluster you want to provision. Each machine is associated with a MicroK8sConfig through which you can set the cluster's properties. Please review  the available options in [the respective definitions file](./apis/v1beta1/microk8sconfig_types.go). You may also find useful the example manifests found under the [examples](./examples/) directory. Note that the configuration structure followed is similar to the the one of kubeadm, in the MicroK8sConfig you will find a CLusterConfiguration and an InitConfiguration sections. When targeting a specific infrastructure you should be aware of which ports are used by MicroK8s and allow them in the network security groups on your deployment.
 
-Two workload cluster templates are available under the [templates](./templates/) folder, which are actively used to validate releases:
+Two workload cluster templates are available under the [templates](./templates) folder, which are actively used to validate releases:
 - [AWS](./templates/cluster-template-aws.yaml), using the [AWS Infrastructure Provider](https://github.com/kubernetes-sigs/cluster-api-provider-aws)
 - [OpenStack](./templates/cluster-template-openstack.yaml), using the [OpenStack Infrastructure Provider](https://github.com/kubernetes-sigs/cluster-api-provider-openstack)
 
