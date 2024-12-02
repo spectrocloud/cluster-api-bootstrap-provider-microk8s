@@ -3,7 +3,7 @@ ALL_ARCH = amd64 arm64
 SPECTRO_VERSION ?= 4.1.0-dev
 TAG ?= v0.6.10-spectro-${SPECTRO_VERSION}
 
-BUILDER_GOLANG_VERSION ?= 1.22
+BUILDER_GOLANG_VERSION ?= 1.23
 BUILD_ARGS = --build-arg CRYPTO_LIB=${FIPS_ENABLE} --build-arg BUILDER_GOLANG_VERSION=${BUILDER_GOLANG_VERSION}
 
 # Image URL to use all building/pushing image targets
