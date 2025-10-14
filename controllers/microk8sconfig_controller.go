@@ -58,9 +58,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	tokenpkg "github.com/canonical/cluster-api-bootstrap-provider-microk8s/pkg/token"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 )
 
 type InitLocker interface {
@@ -611,7 +612,7 @@ func (r *MicroK8sConfigReconciler) storeBootstrapData(ctx context.Context, scope
 			Name:      scope.Config.Name,
 			Namespace: scope.Config.Namespace,
 			Labels: map[string]string{
-				clusterv1.ClusterLabelName: scope.Cluster.Name,
+				clusterv1.ClusterNameLabel: scope.Cluster.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -792,38 +793,37 @@ func (r *MicroK8sConfigReconciler) SetupWithManager(ctx context.Context, mgr ctr
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&bootstrapclusterxk8siov1beta1.MicroK8sConfig{}).
-		Watches(&source.Kind{Type: &clusterv1.Machine{}},
-			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc)).
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx),
-			r.WatchFilterValue))
+		Watches(
+			&clusterv1.Machine{},
+			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc),
+		).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue))
 
 	if feature.Gates.Enabled(feature.MachinePool) {
 		b = b.Watches(
-			&source.Kind{Type: &expv1.MachinePool{}},
+			&expv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(r.MachineToBootstrapMapFunc),
-		).WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue))
+		).WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue))
 	}
 
-	c, err := b.Build(r)
-	if err != nil {
-		return errors.Wrap(err, "failed setting up with a controller manager")
-	}
-	err = c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
+	b = b.Watches(
+		&clusterv1.Cluster{},
 		handler.EnqueueRequestsFromMapFunc(r.ClusterToMicroK8sConfigs),
-		predicates.All(ctrl.LoggerFrom(ctx),
-			predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
-			predicates.ResourceHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue),
+		builder.WithPredicates(
+			predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetScheme(), mgr.GetLogger()),
+			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 		),
 	)
+
+	_, err := b.Build(r)
 	if err != nil {
-		return errors.Wrap(err, "failed adding Watch for Clusters to controller manager")
+		return errors.Wrap(err, "failed setting up with a controller manager")
 	}
 
 	return nil
 }
 
-func (r *MicroK8sConfigReconciler) ClusterToMicroK8sConfigs(o client.Object) []ctrl.Request {
+func (r *MicroK8sConfigReconciler) ClusterToMicroK8sConfigs(ctx context.Context, o client.Object) []ctrl.Request {
 	result := []ctrl.Request{}
 
 	c, ok := o.(*clusterv1.Cluster)
@@ -834,12 +834,12 @@ func (r *MicroK8sConfigReconciler) ClusterToMicroK8sConfigs(o client.Object) []c
 	selectors := []client.ListOption{
 		client.InNamespace(c.Namespace),
 		client.MatchingLabels{
-			clusterv1.ClusterLabelName: c.Name,
+			clusterv1.ClusterNameLabel: c.Name,
 		},
 	}
 
 	machineList := &clusterv1.MachineList{}
-	if err := r.Client.List(context.TODO(), machineList, selectors...); err != nil {
+	if err := r.Client.List(ctx, machineList, selectors...); err != nil {
 		return nil
 	}
 
@@ -847,13 +847,13 @@ func (r *MicroK8sConfigReconciler) ClusterToMicroK8sConfigs(o client.Object) []c
 		if m.Spec.Bootstrap.ConfigRef != nil &&
 			m.Spec.Bootstrap.ConfigRef.GroupVersionKind().GroupKind() == v1beta1.GroupVersion.WithKind("MicroK8sConfig").GroupKind() {
 			name := client.ObjectKey{Namespace: m.Namespace, Name: m.Spec.Bootstrap.ConfigRef.Name}
-			result = append(result, ctrl.Request{NamespacedName: name})
+			result = append(result, reconcile.Request{NamespacedName: name})
 		}
 	}
 
 	if feature.Gates.Enabled(feature.MachinePool) {
 		machinePoolList := &expv1.MachinePoolList{}
-		if err := r.Client.List(context.TODO(), machinePoolList, selectors...); err != nil {
+		if err := r.Client.List(ctx, machinePoolList, selectors...); err != nil {
 			return nil
 		}
 
@@ -861,7 +861,7 @@ func (r *MicroK8sConfigReconciler) ClusterToMicroK8sConfigs(o client.Object) []c
 			if mp.Spec.Template.Spec.Bootstrap.ConfigRef != nil &&
 				mp.Spec.Template.Spec.Bootstrap.ConfigRef.GroupVersionKind().GroupKind() == v1beta1.GroupVersion.WithKind("MicroK8sConfig").GroupKind() {
 				name := client.ObjectKey{Namespace: mp.Namespace, Name: mp.Spec.Template.Spec.Bootstrap.ConfigRef.Name}
-				result = append(result, ctrl.Request{NamespacedName: name})
+				result = append(result, reconcile.Request{NamespacedName: name})
 			}
 		}
 	}
@@ -869,10 +869,13 @@ func (r *MicroK8sConfigReconciler) ClusterToMicroK8sConfigs(o client.Object) []c
 	return result
 }
 
-func (r *MicroK8sConfigReconciler) MachineToBootstrapMapFunc(o client.Object) []ctrl.Request {
+func (r *MicroK8sConfigReconciler) MachineToBootstrapMapFunc(ctx context.Context, o client.Object) []ctrl.Request {
 	m, ok := o.(*clusterv1.Machine)
 	if !ok {
-		panic(fmt.Sprintf("Expected a Machine but got a %T", o))
+		_, ok = o.(*expv1.MachinePool)
+		if !ok {
+			panic(fmt.Sprintf("Expected a Machine or MachinePool but got a %T", o))
+		}
 	}
 
 	result := []ctrl.Request{}
@@ -886,8 +889,8 @@ func (r *MicroK8sConfigReconciler) MachineToBootstrapMapFunc(o client.Object) []
 func (r *MicroK8sConfigReconciler) getControlPlaneMachinesForCluster(ctx context.Context,
 	cluster client.ObjectKey) ([]clusterv1.Machine, error) {
 	selector := map[string]string{
-		clusterv1.ClusterLabelName:             cluster.Name,
-		clusterv1.MachineControlPlaneLabelName: "",
+		clusterv1.ClusterNameLabel:             cluster.Name,
+		clusterv1.MachineControlPlaneNameLabel: "",
 	}
 
 	machineList := clusterv1.MachineList{}
