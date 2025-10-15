@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -38,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	bootstrapclusterxk8siov1beta1 "github.com/canonical/cluster-api-bootstrap-provider-microk8s/apis/v1beta1"
 
@@ -90,18 +92,30 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	restConfig := ctrl.GetConfigOrDie()
 	restConfig.UserAgent = remote.DefaultClusterAPIUserAgent("cluster-api-microk8s-bootstrap-manager")
-	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
+	managerOptions := ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "microk8s-bootstrap-manager-leader-election-capi",
-		ClientDisableCacheFor: []client.Object{
-			&corev1.ConfigMap{},
-			&corev1.Secret{},
+		Metrics:                server.Options{BindAddress: metricsAddr},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.ConfigMap{},
+					&corev1.Secret{},
+				},
+			},
 		},
-		Namespace: watchNamespace,
-	})
+	}
+	if watchNamespace != "" {
+		managerOptions.Cache = cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
+				watchNamespace: {},
+			},
+		}
+	}
+
+	mgr, err := ctrl.NewManager(restConfig, managerOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
