@@ -889,8 +889,8 @@ func (r *MicroK8sConfigReconciler) MachineToBootstrapMapFunc(ctx context.Context
 func (r *MicroK8sConfigReconciler) getControlPlaneMachinesForCluster(ctx context.Context,
 	cluster client.ObjectKey) ([]clusterv1.Machine, error) {
 	selector := map[string]string{
-		clusterv1.ClusterNameLabel:             cluster.Name,
-		clusterv1.MachineControlPlaneNameLabel: "",
+		clusterv1.ClusterNameLabel:         cluster.Name,
+		clusterv1.MachineControlPlaneLabel: "",
 	}
 
 	machineList := clusterv1.MachineList{}
