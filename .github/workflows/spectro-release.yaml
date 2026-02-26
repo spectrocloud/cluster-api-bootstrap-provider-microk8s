@@ -75,8 +75,6 @@ jobs:
           GO_VERSION: 1.24.13
           BUILDER_GOLANG_VERSION: 1.24.13
           ALL_ARCH: amd64
-          GO_VERSION: 1.24.13
-          BUILDER_GOLANG_VERSION: 1.24.13
         run: |
           make docker-build-all
           make docker-push-all
