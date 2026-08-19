@@ -85,7 +85,7 @@ func NewJoinControlPlane(input *ControlPlaneJoinInput) (*CloudConfig, error) {
 		return nil, fmt.Errorf("join token %q is invalid; length must be 32 characters", input.Token)
 	}
 	if input.TokenTTL <= 0 {
-		return nil, fmt.Errorf("join token TTL %q is not a positive number", input.TokenTTL)
+		return nil, fmt.Errorf("join token TTL %d is not a positive number", input.TokenTTL)
 	}
 
 	// figure out endpoint type
