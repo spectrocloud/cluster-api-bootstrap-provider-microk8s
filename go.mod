@@ -1,6 +1,6 @@
 module github.com/canonical/cluster-api-bootstrap-provider-microk8s
 
-go 1.25.0
+go 1.26.6
 
 require (
 	github.com/go-logr/logr v1.4.2
